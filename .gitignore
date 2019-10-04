@@ -5,3 +5,4 @@ projectfiles
 mbed-os
 BUILD
 
+stm24256_eeprom_driver
