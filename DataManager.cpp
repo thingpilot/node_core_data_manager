@@ -60,7 +60,7 @@ int DataManager::get_storage_size_bytes()
  *
  * @return Indicates success or failure reason
  */
-int DataManager::initialise_type_table()
+int DataManager::init_type_table()
 {
     char blank[TYPE_STORE_PAGES * PAGE_SIZE_BYTES] = { 0 };
 
