@@ -15,10 +15,9 @@
 DataManager::DataManager(PinName write_control, PinName sda, PinName scl, int frequency_hz) : 
                          _storage(write_control, sda, scl, frequency_hz)
 {
-
+    
 }
 #endif /* #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0) */
-
 
 DataManager::~DataManager()
 {
@@ -27,21 +26,65 @@ DataManager::~DataManager()
     #endif /* #if defined (_PERSISTENT_STORAGE_DRIVER) && (_PERSISTENT_STORAGE_DRIVER == STM24256) */
 }
 
-
+/** Return maximum number of file type definitions that can be stored
+ *  in persistent storage
+ *
+ *  @return Maximum number of file type definitions that can be stored
+ */
 uint16_t DataManager::get_max_types()
 {
 	return (uint16_t)TYPE_STORE_LENGTH / sizeof(DataManager_FileSystem::FileType_t);
 }
 
-
+/** Return maximum number of file records that can be stored
+ *  in persistent storage
+ *
+ *  @return Maximum number of file records that can be stored
+ */
 int DataManager::get_max_records()
 {
 	return (int)RECORD_STORE_LENGTH / sizeof(DataManager_FileSystem::FileRecord_t);
 }
 
-
+/** Return overall total file storage size in bytes
+ *
+ *  @return Total usable space, in bytes, for file storage
+ */
 int DataManager::get_storage_size_bytes()
 {
 	return (int)STORAGE_LENGTH;
+}
+
+/** Initialise the file type and record tables to all zeros
+ *
+ * @return Indicates success or failure reason
+ */
+int DataManager::init_filesystem()
+{
+    char blank[PAGE_SIZE_BYTES] = { 0 };
+
+    int status;
+
+    for(int ts_page = 0; ts_page < TYPE_STORE_PAGES; ts_page++)
+    {
+        status = _storage.write_to_address(TYPE_STORE_START_ADDRESS + (ts_page * PAGE_SIZE_BYTES), blank, PAGE_SIZE_BYTES);
+
+        if(status != DataManager::DATA_MANAGER_OK)
+        {
+            return status;
+        }
+    }
+
+    for(int rs_page = 0; rs_page < RECORD_STORE_PAGES; rs_page++)
+    {
+        status = _storage.write_to_address(RECORD_STORE_START_ADDRESS + (rs_page * PAGE_SIZE_BYTES), blank, PAGE_SIZE_BYTES);
+
+        if(status != DataManager::DATA_MANAGER_OK)
+        {
+            return status;
+        }
+    }
+
+    return DataManager::DATA_MANAGER_OK;
 }
 
