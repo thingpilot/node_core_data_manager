@@ -37,7 +37,7 @@ namespace DataManager_FileSystem
     {
         struct 
         {
-            int length;
+            uint16_t length_bytes;
             uint8_t type_id;
             uint8_t valid;
         } parameters;
@@ -100,13 +100,22 @@ class DataManager
          */
 		int get_storage_size_bytes();
 
-    private:
-
         /** Initialise the file type and record tables to all zeros
          *
          * @return Indicates success or failure reason
          */
         int init_filesystem();
+
+        /** Add new file type entry to the file type table
+         *
+         * @param type_id Enumerated value of the file type to be added
+         * @param length_bytes Size of the sum of the struct's components,
+         *                     equivalent to sizeof(yourStruct)
+         * @return Indicates success of failure reason
+         */
+        int add_file_type(uint8_t type_id, uint16_t length_bytes);
+
+    private:
 
         #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0)
         STM24256 _storage;

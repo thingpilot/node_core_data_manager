@@ -73,6 +73,8 @@ int DataManager::init_filesystem()
         {
             return status;
         }
+
+        wait_us(5000);
     }
 
     for(int rs_page = 0; rs_page < RECORD_STORE_PAGES; rs_page++)
@@ -83,8 +85,22 @@ int DataManager::init_filesystem()
         {
             return status;
         }
+
+        wait_us(5000);
     }
 
     return DataManager::DATA_MANAGER_OK;
+}
+
+/** Add new file type entry to the file type table
+ *
+ * @param type_id Enumerated value of the file type to be added
+ * @param length_bytes Size of the sum of the struct's components,
+ *                     equivalent to sizeof(yourStruct), in bytes
+ * @return Indicates success or failure reason
+ */
+int DataManager::add_file_type(uint8_t type_id, uint16_t length_bytes)
+{
+    return 0;
 }
 
