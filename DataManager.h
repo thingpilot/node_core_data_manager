@@ -1,6 +1,6 @@
 /**
   * @file    DataManager.h
-  * @version 1.0.0
+  * @version 0.1.0
   * @author  Rafaella Neofytou, Adam Mitchell
   * @brief   Header file of the DataManager. Provides a very lightweight filesystem to facilitate the
   *          storage of arbritrary file types
@@ -34,15 +34,16 @@
 namespace DataManager_FileSystem
 {
 	union FileType_t
-		{
-			struct 
-			{
-				int type_id;
-				int length;
-			} parameters;
+    {
+        struct 
+        {
+            int length;
+            uint8_t type_id;
+            uint8_t valid;
+        } parameters;
 
-			char data[sizeof(FileType_t::parameters)];
-		};
+        char data[sizeof(FileType_t::parameters)];
+    };
 
 	union FileRecord_t
 	{
@@ -52,7 +53,7 @@ namespace DataManager_FileSystem
 			uint16_t length_bytes;
 			uint16_t record_id;
 			uint8_t type_id;
-			uint8_t UNUSED;
+			uint8_t valid;
 		} parameters;
 		
 		char data[sizeof(FileRecord_t::parameters)];
@@ -67,6 +68,11 @@ class DataManager
 {
 
 	public:
+
+        enum
+        {
+            DATAMANAGER_OK = 0
+        };
 
         #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0)
         DataManager(PinName write_control, PinName sda, PinName scl, int frequency_hz);
@@ -94,11 +100,10 @@ class DataManager
          */
 		int get_storage_size_bytes();
 
-
     private:
 
         #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0)
         STM24256 _storage;
         #endif /* #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0) */
-        
+
 };

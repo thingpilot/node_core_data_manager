@@ -1,6 +1,6 @@
 /**
   * @file    DataManager.cpp
-  * @version 1.0.0
+  * @version 0.1.0
   * @author  Rafaella Neofytou, Adam Mitchell
   * @brief   C++ file of the DataManager. Provides a very lightweight filesystem to facilitate the
   *          storage of arbritrary file types
