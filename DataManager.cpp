@@ -11,10 +11,13 @@
 #include "DataManager.h"
 
 
-DataManager::DataManager()
+#if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0)
+DataManager::DataManager(PinName write_control, PinName sda, PinName scl, int frequency_hz) : 
+                         _storage(write_control, sda, scl, frequency_hz)
 {
 
 }
+#endif /* #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0) */
 
 
 DataManager::~DataManager()

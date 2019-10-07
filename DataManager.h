@@ -13,12 +13,9 @@
 /** Includes 
  */
 #include <mbed.h>
+#include "board.h"
 
-/** User must define which persistent storage is being used 
- */ 
-#define _PERSISTENT_STORAGE_DRIVER STM24256
-
-#if defined (_PERSISTENT_STORAGE_DRIVER) && (_PERSISTENT_STORAGE_DRIVER == STM24256)
+#if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0)
 
 #include "STM24256.h"
 
@@ -61,7 +58,7 @@ namespace DataManager_FileSystem
 		char data[sizeof(FileRecord_t::parameters)];
 	};
 }
-#endif /* #if defined (_PERSISTENT_STORAGE_DRIVER) && (_PERSISTENT_STORAGE_DRIVER == STM24256) */
+#endif /* #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0) */
 
 
 /** Base class for the Data Manager
@@ -71,7 +68,9 @@ class DataManager
 
 	public:
 
-		DataManager();
+        #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0)
+        DataManager(PinName write_control, PinName sda, PinName scl, int frequency_hz);
+        #endif /* #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0) */
 
 		~DataManager();
 
@@ -80,4 +79,12 @@ class DataManager
 		int get_max_records();
 
 		int get_storage_size_bytes();
+
+
+    private:
+
+        #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0)
+        STM24256 _storage;
+        #endif /* #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0) */
+        
 };
