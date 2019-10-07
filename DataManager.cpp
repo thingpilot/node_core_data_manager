@@ -101,6 +101,13 @@ int DataManager::init_filesystem()
  */
 int DataManager::add_file_type(uint8_t type_id, uint16_t length_bytes)
 {
+    DataManager_FileSystem::FileType_t type;
+    type.parameters.type_id = type_id;
+    type.parameters.length_bytes = length_bytes;
+    type.parameters.valid = type_id + length_bytes;
+
+    _storage.write_to_address(16, type.data, 4);
+
     return 0;
 }
 
@@ -131,5 +138,36 @@ bool DataManager::is_valid_file_type(DataManager_FileSystem::FileType_t type)
 
 
     return true;
+}
+
+/** Calculate the number of valid file type definitions currently 
+ *  stored in memory
+ * @param &valid_entries Address of integer value in which number of 
+ *                       detected valid entries will be stored
+ * @return Indicates success or failure reason                        
+ */
+int DataManager::total_stored_file_type_entries(int &valid_entries)
+{
+    DataManager_FileSystem::FileType_t type;
+    int type_size = sizeof(type);
+    
+    uint16_t max_types = get_max_types();
+
+    for(uint16_t type_index = 0; type_index < max_types; type_index++)
+    {
+        int status = _storage.read_from_address(TYPE_STORE_START_ADDRESS + (type_index * type_size), type.data, type_size);
+
+        if(status != DataManager::DATA_MANAGER_OK)
+        {
+            return status;
+        }
+
+        if(is_valid_file_type(type))
+        {
+            valid_entries++;
+        }
+    }
+
+    return DataManager::DATA_MANAGER_OK;
 }
 

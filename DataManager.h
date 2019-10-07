@@ -111,9 +111,17 @@ class DataManager
          * @param type_id Enumerated value of the file type to be added
          * @param length_bytes Size of the sum of the struct's components,
          *                     equivalent to sizeof(yourStruct)
-         * @return Indicates success of failure reason
+         * @return Indicates success or failure reason
          */
         int add_file_type(uint8_t type_id, uint16_t length_bytes);
+
+        /** Calculate the number of valid file type definitions currently 
+         *  stored in memory
+         * @param &valid_entries Address of integer value in which number of 
+         *                       detected valid entries will be stored
+         * @return Indicates success or failure reason                        
+         */
+        int total_stored_file_type_entries(int &valid_entries);
 
     private:
 
