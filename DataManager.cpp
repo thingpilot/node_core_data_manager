@@ -25,13 +25,13 @@ DataManager::~DataManager()
 
 uint16_t DataManager::get_max_types()
 {
-	return (uint16_t)TYPE_STORE_LENGTH - sizeof(FileSystem::FileType_t);
+	return (uint16_t)TYPE_STORE_LENGTH - sizeof(DataManager_FileSystem::FileType_t);
 }
 
 
 int DataManager::get_max_records()
 {
-	return (int)RECORD_STORE_LENGTH - sizeof(FileSystem::FileRecord_t);
+	return (int)RECORD_STORE_LENGTH - sizeof(DataManager_FileSystem::FileRecord_t);
 }
 
 

@@ -34,7 +34,7 @@
 #define STORAGE_START_ADDRESS TYPE_STORE_LENGTH + RECORD_STORE_LENGTH
 #define STORAGE_LENGTH (PAGES * PAGE_SIZE_BYTES) - (STORAGE_START_ADDRESS)
 
-namespace FileSystem
+namespace DataManager_FileSystem
 {
 	union FileType_t
 		{
@@ -59,7 +59,7 @@ namespace FileSystem
 		} parameters;
 		
 		char data[sizeof(FileRecord_t::parameters)];
-	}
+	};
 }
 #endif /* #if defined (_PERSISTENT_STORAGE_DRIVER) && (_PERSISTENT_STORAGE_DRIVER == STM24256) */
 
@@ -80,4 +80,4 @@ class DataManager
 		int get_max_records();
 
 		int get_storage_size_bytes();
-}
+};
