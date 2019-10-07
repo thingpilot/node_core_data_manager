@@ -171,3 +171,40 @@ int DataManager::total_stored_file_type_entries(int &valid_entries)
     return DataManager::DATA_MANAGER_OK;
 }
 
+/** Determine the next available address to which to write file type definition
+ *
+ * @param &next_available_address Address of integer value in which the address
+ *                                of the next available location in memory to which
+ *                                you can write a file type entry is stored. -1 if 
+ *                                there are no available spaces
+ * @return Indicates success or failure reason
+ */
+int DataManager::get_next_available_file_type_table_address(int &next_available_address)
+{
+    DataManager_FileSystem::FileType_t type;
+    int type_size = sizeof(type);
+    
+    uint16_t max_types = get_max_types();
+
+    next_available_address = -1;
+
+    for(uint16_t type_index = 0; type_index < max_types; type_index++)
+    {
+        int address = TYPE_STORE_START_ADDRESS + (type_index * type_size);
+        int status = _storage.read_from_address(address, type.data, type_size);
+
+        if(status != DataManager::DATA_MANAGER_OK)
+        {
+            return status;
+        }
+
+        if(!is_valid_file_type(type))
+        {
+            next_available_address = address;
+            break;
+        }
+    }
+
+    return DataManager::DATA_MANAGER_OK;
+}
+

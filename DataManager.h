@@ -123,6 +123,16 @@ class DataManager
          */
         int total_stored_file_type_entries(int &valid_entries);
 
+        /** Determine the next available address to which to write file type definition
+         *
+         * @param &next_available_address Address of integer value in which the address
+         *                                of the next available location in memory to which
+         *                                you can write a file type entry is stored. -1 if 
+         *                                there are no available spaces
+         * @return Indicates success or failure reason
+         */
+        int get_next_available_file_type_table_address(int &next_available_address);
+
     private:
 
         /** Perform checksum on given FileType_t using the 'valid' parameter
