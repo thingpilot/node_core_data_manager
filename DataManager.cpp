@@ -22,7 +22,9 @@ DataManager::DataManager(PinName write_control, PinName sda, PinName scl, int fr
 
 DataManager::~DataManager()
 {
-
+    #if defined (_PERSISTENT_STORAGE_DRIVER) && (_PERSISTENT_STORAGE_DRIVER == STM24256)
+    _storage.~STM24256();
+    #endif /* #if defined (_PERSISTENT_STORAGE_DRIVER) && (_PERSISTENT_STORAGE_DRIVER == STM24256) */
 }
 
 
