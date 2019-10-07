@@ -19,7 +19,6 @@ DataManager::DataManager(PinName write_control, PinName sda, PinName scl, int fr
 }
 #endif /* #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0) */
 
-
 DataManager::~DataManager()
 {
     #if defined (_PERSISTENT_STORAGE_DRIVER) && (_PERSISTENT_STORAGE_DRIVER == STM24256)
@@ -56,30 +55,36 @@ int DataManager::get_storage_size_bytes()
 	return (int)STORAGE_LENGTH;
 }
 
-/** Initialise the file type table to all zeros
+/** Initialise the file type and record tables to all zeros
  *
  * @return Indicates success or failure reason
  */
-int DataManager::init_type_table()
+int DataManager::init_filesystem()
 {
-    char blank[TYPE_STORE_PAGES * PAGE_SIZE_BYTES] = { 0 };
+    char blank[PAGE_SIZE_BYTES] = { 0 };
 
-    int status = _storage.write_to_address(TYPE_STORE_START_ADDRESS, blank, TYPE_STORE_PAGES * PAGE_SIZE_BYTES);
-    
-    if(status != DataManager::DATA_MANAGER_OK) 
+    int status;
+
+    for(int ts_page = 0; ts_page < TYPE_STORE_PAGES; ts_page++)
     {
-        return status;
+        status = _storage.write_to_address(TYPE_STORE_START_ADDRESS + (ts_page * PAGE_SIZE_BYTES), blank, PAGE_SIZE_BYTES);
+
+        if(status != DataManager::DATA_MANAGER_OK)
+        {
+            return status;
+        }
+    }
+
+    for(int rs_page = 0; rs_page < RECORD_STORE_PAGES; rs_page++)
+    {
+        status = _storage.write_to_address(RECORD_STORE_START_ADDRESS + (rs_page * PAGE_SIZE_BYTES), blank, PAGE_SIZE_BYTES);
+
+        if(status != DataManager::DATA_MANAGER_OK)
+        {
+            return status;
+        }
     }
 
     return DataManager::DATA_MANAGER_OK;
-}
-
-/** Initialise the file record table to all zeros
- *
- * @return Indicates success or failure reason
- */
-int DataManager::init_record_table()
-{
-
 }
 

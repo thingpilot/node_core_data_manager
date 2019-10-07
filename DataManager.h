@@ -102,17 +102,11 @@ class DataManager
 
     private:
 
-        /** Initialise the file type table to all zeros
+        /** Initialise the file type and record tables to all zeros
          *
          * @return Indicates success or failure reason
          */
-        int init_type_table();
-
-        /** Initialise the file record table to all zeros
-         *
-         * @return Indicates success or failure reason
-         */
-        int init_record_table();
+        int init_filesystem();
 
         #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0)
         STM24256 _storage;
