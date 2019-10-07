@@ -71,7 +71,7 @@ class DataManager
 
         enum
         {
-            DATAMANAGER_OK = 0
+            DATA_MANAGER_OK = 0
         };
 
         #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0)
@@ -101,6 +101,18 @@ class DataManager
 		int get_storage_size_bytes();
 
     private:
+
+        /** Initialise the file type table to all zeros
+         *
+         * @return Indicates success or failure reason
+         */
+        int init_type_table();
+
+        /** Initialise the file record table to all zeros
+         *
+         * @return Indicates success or failure reason
+         */
+        int init_record_table();
 
         #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0)
         STM24256 _storage;
