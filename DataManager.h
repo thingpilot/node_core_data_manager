@@ -117,6 +117,13 @@ class DataManager
 
     private:
 
+        /** Perform checksum on given FileType_t using the 'valid' parameter
+         *
+         * @param type File type defintion to be checked for validity
+         * @return True if file type entry is valid, else false
+         */
+        bool is_valid_file_type(DataManager_FileSystem::FileType_t type);
+
         #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0)
         STM24256 _storage;
         #endif /* #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0) */

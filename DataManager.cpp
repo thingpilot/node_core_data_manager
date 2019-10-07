@@ -104,3 +104,32 @@ int DataManager::add_file_type(uint8_t type_id, uint16_t length_bytes)
     return 0;
 }
 
+/** Perform checksum on given FileType_t using the 'valid' parameter
+ *
+ * @param type File type defintion to be checked for validity
+ * @return True if file type entry is valid, else false
+ */
+bool DataManager::is_valid_file_type(DataManager_FileSystem::FileType_t type)
+{
+    /** During init_filesystem() we set every bit in the type and record tables to 0
+     *  so, if the valid byte == 0, this can't be a valid entry
+     */
+    if(type.parameters.valid == 0x00)
+    {
+        return false;
+    }
+    
+    /** Mask the first 24 bits so that we can use our 8-bit valid flag as a rudimentary checksum 
+     *  of the length and type id
+     */
+    uint32_t checksum = (type.parameters.length_bytes + type.parameters.type_id) & 0x000000FF;
+
+    if(type.parameters.valid != checksum)
+    {
+        return false;
+    }
+
+
+    return true;
+}
+
