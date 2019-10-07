@@ -74,10 +74,24 @@ class DataManager
 
 		~DataManager();
 
+        /** Return maximum number of file type definitions that can be stored
+         *  in persistent storage
+         *
+         *  @return Maximum number of file type definitions that can be stored
+         */
 		uint16_t get_max_types();
 
+        /** Return maximum number of file records that can be stored
+         *  in persistent storage
+         *
+         *  @return Maximum number of file records that can be stored
+         */
 		int get_max_records();
 
+        /** Return overall total file storage size in bytes
+         *
+         *  @return Total usable space, in bytes, for file storage
+         */
 		int get_storage_size_bytes();
 
 
