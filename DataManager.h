@@ -153,6 +153,13 @@ class DataManager
          */
         bool is_valid_file_type(DataManager_FileSystem::FileType_t type);
 
+        /** Perform checksum on given FileRecord_t using the 'valid' parameter
+         *
+         * @param record File record to be checked for validity
+         * @return True if file record entry is valid, else false
+         */
+        bool is_valid_file_record(DataManager_FileSystem::FileRecord_t record);
+
         #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0)
         STM24256 _storage;
         #endif /* #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0) */

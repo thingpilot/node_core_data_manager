@@ -158,6 +158,29 @@ bool DataManager::is_valid_file_type(DataManager_FileSystem::FileType_t type)
     return true;
 }
 
+/** Perform checksum on given FileRecord_t using the 'valid' parameter
+ *
+ * @param record File record to be checked for validity
+ * @return True if file record entry is valid, else false
+ */
+bool DataManager::is_valid_file_record(DataManager_FileSystem::FileRecord_t record)
+{
+    if(record.parameters.valid == 0x00)
+    {
+        return false;
+    }
+
+    uint32_t checksum = (record.parameters.start_address + record.parameters.length_bytes + 
+                         record.parameters.record_id + record.parameters.type_id) & 0x000000FF;
+
+    if(record.parameters.valid != checksum)
+    {
+        return false;
+    }
+
+    return true;
+}
+
 /** Calculate the number of valid file type definitions currently 
  *  stored in memory
  * @param &valid_entries Address of integer value in which number of 
