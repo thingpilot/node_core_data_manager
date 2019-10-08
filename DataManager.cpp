@@ -524,3 +524,99 @@ int DataManager::get_next_available_file_record_table_address(int &next_availabl
     return DataManager::DATA_MANAGER_OK;
 }
 
+int DataManager::append_to_file(uint8_t type_id, char *data)
+{
+    return 0;
+}
+
+int DataManager::delete_file_contents(uint8_t type_id)
+{
+    DataManager_FileSystem::FileType_t type;
+
+    int status = get_file_type_by_id(type_id, type);
+
+    if(status != DataManager::DATA_MANAGER_OK)
+    {
+        return status;
+    }
+
+    type.parameters.next_available_address = type.parameters.file_start_address;
+    type.parameters.valid = type.parameters.type_id + 
+                            type.parameters.length_bytes + 
+                            type.parameters.file_start_address +
+                            type.parameters.file_end_address + 
+                            type.parameters.next_available_address;
+
+    status = update_file_type(type_id, type);
+
+    if(status != DataManager::DATA_MANAGER_OK)
+    {
+        return status;
+    }
+
+    return DataManager::DATA_MANAGER_OK;
+}
+
+int DataManager::overwrite_file(uint8_t type_id, char *data)
+{
+    return 0;
+}
+
+int DataManager::truncate_file(uint8_t type_id, int entries_to_truncate)
+{
+    return 0;
+}
+
+int DataManager::update_file_type(uint8_t type_id, DataManager_FileSystem::FileType_t type)
+{
+    uint16_t max_types = get_max_types();
+    int type_size = sizeof(type);
+    
+    bool match = false;
+    uint16_t address;
+
+    DataManager_FileSystem::FileType_t read_type;
+
+    for(uint16_t type_index = 0; type_index < max_types; type_index++)
+    {
+        address = TYPE_STORE_START_ADDRESS + (type_index * type_size);
+        int status = _storage.read_from_address(address, read_type.data, type_size);
+
+        if(status != DataManager::DATA_MANAGER_OK)
+        {
+            return status;
+        }
+
+        if(!is_valid_file_type(read_type))
+        {
+            continue;
+        }
+
+        if(type_id == read_type.parameters.type_id)
+        {
+            match = true;
+            break;
+        }
+    }
+
+    if(!match)
+    {
+        return DataManager::DATA_MANAGER_INVALID_TYPE;
+    }
+
+    type.parameters.valid = type.parameters.type_id + 
+                            type.parameters.length_bytes + 
+                            type.parameters.file_start_address +
+                            type.parameters.file_end_address + 
+                            type.parameters.next_available_address;
+
+    int status = _storage.write_to_address(address, type.data, type_size);
+
+    if(status != DataManager::DATA_MANAGER_OK)
+    {
+        return status;
+    }
+    
+    return DataManager::DATA_MANAGER_OK;
+}
+

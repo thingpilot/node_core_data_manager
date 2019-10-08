@@ -146,6 +146,8 @@ class DataManager
          */
         int add_file_type(DataManager_FileSystem::FileType_t type, uint16_t quantity_to_store);
 
+        int update_file_type(uint8_t type_id, DataManager_FileSystem::FileType_t type);
+
         /** Add new file record entry to the file record table
          *
          * @param record FileRecord_t object representing file record to be
@@ -216,6 +218,14 @@ class DataManager
          * @return Indicates success or failure reason
          */
         int get_global_stats(char *data);
+
+        int append_to_file(uint8_t type_id, char *data);
+
+        int delete_file_contents(uint8_t type_id);
+
+        int overwrite_file(uint8_t type_id, char *data);
+
+        int truncate_file(uint8_t type_id, int entries_to_truncate);
 
     private:
 
