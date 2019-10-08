@@ -21,24 +21,42 @@
 
 #define PAGES 500
 #define PAGE_SIZE_BYTES 64
+#define EEPROM_SIZE_BYTES 32000
+
 #define TYPE_STORE_PAGES 2
 #define RECORD_STORE_PAGES 125
 
-#define TYPE_STORE_START_ADDRESS 0
-#define TYPE_STORE_LENGTH PAGE_SIZE_BYTES * TYPE_STORE_PAGES
-#define RECORD_STORE_START_ADDRESS TYPE_STORE_LENGTH
+#define GLOBAL_STATS_START_ADDRESS 0
+#define GLOBAL_STATS_LENGTH 4
+#define TYPE_STORE_START_ADDRESS GLOBAL_STATS_LENGTH
+#define TYPE_STORE_LENGTH ((PAGE_SIZE_BYTES * TYPE_STORE_PAGES) - GLOBAL_STATS_LENGTH)
+#define RECORD_STORE_START_ADDRESS TYPE_STORE_LENGTH + GLOBAL_STATS_LENGTH
 #define RECORD_STORE_LENGTH PAGE_SIZE_BYTES * RECORD_STORE_PAGES
-#define STORAGE_START_ADDRESS TYPE_STORE_LENGTH + RECORD_STORE_LENGTH
-#define STORAGE_LENGTH (PAGES * PAGE_SIZE_BYTES) - (STORAGE_START_ADDRESS)
+#define STORAGE_START_ADDRESS GLOBAL_STATS_LENGTH + TYPE_STORE_LENGTH + RECORD_STORE_LENGTH
+#define STORAGE_LENGTH ((PAGES * PAGE_SIZE_BYTES) - (STORAGE_START_ADDRESS))
 
 namespace DataManager_FileSystem
 {
+    union GlobalStats_t
+    {
+        struct
+        {
+            uint16_t next_available_address;
+            uint16_t space_remaining;
+        } parameters;
+
+        char data[sizeof(GlobalStats_t::parameters)];
+    };
+
 	union FileType_t
     {
         struct 
         {
             uint16_t length_bytes;
-            uint8_t type_id;
+            uint16_t file_start_address;
+            uint16_t file_end_address;
+            uint16_t next_available_address;
+            uint8_t type_id; //filename
             uint8_t valid;
         } parameters;
 
@@ -51,7 +69,6 @@ namespace DataManager_FileSystem
 		{
 			uint16_t start_address;
 			uint16_t length_bytes;
-			uint16_t record_id;
 			uint8_t type_id;
 			uint8_t valid;
 		} parameters;
@@ -71,9 +88,11 @@ class DataManager
 
         enum
         {
-            DATA_MANAGER_OK        = 0,
-            FILE_TYPE_TABLE_FULL   = 1,
-            FILE_RECORD_TABLE_FULL = 2
+            DATA_MANAGER_OK              = 0,
+            FILE_TYPE_TABLE_FULL         = 20,
+            FILE_RECORD_TABLE_FULL       = 21,
+            DATA_MANAGER_INVALID_TYPE    = 22,
+            FILE_TYPE_INSUFFICIENT_SPACE = 23
         };
 
         #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0)
@@ -108,14 +127,24 @@ class DataManager
          */
         int init_filesystem();
 
-        /** Add new file type entry to the file type table
+        /** Get all FileType_t parameters for a given type_id
          *
-         * @param type_id Enumerated value of the file type to be added
-         * @param length_bytes Size of the sum of the struct's components,
-         *                     equivalent to sizeof(yourStruct)
+         * @param type_id ID of file type definition to be retrieved
+         * @param &type Address of FileType_t object in which retrieved information
+         *              will be stored
          * @return Indicates success or failure reason
          */
-        int add_file_type(DataManager_FileSystem::FileType_t type);
+        int get_file_type_by_id(uint8_t type_id, DataManager_FileSystem::FileType_t &type);
+
+        /** Add new file type entry to the file type table and allocate a region of
+         *  memory to store file data within
+         *
+         * @param type FileType_t object representing file type definition to be
+         *             stored into persistent storage medium
+         * @param quantity_to_store Number of unique entries of this file type to be stored
+         * @return Indicates success or failure reason
+         */
+        int add_file_type(DataManager_FileSystem::FileType_t type, uint16_t quantity_to_store);
 
         /** Add new file record entry to the file record table
          *
@@ -181,6 +210,13 @@ class DataManager
          */        
         int get_next_available_file_record_table_address(int &next_available_address);
 
+        /** Get global next address and space remaining counters
+         *
+         * @param data Byte array to which to write global stats counters
+         * @return Indicates success or failure reason
+         */
+        int get_global_stats(char *data);
+
     private:
 
         /** Perform checksum on given FileType_t using the 'valid' parameter
@@ -196,6 +232,13 @@ class DataManager
          * @return True if file record entry is valid, else false
          */
         bool is_valid_file_record(DataManager_FileSystem::FileRecord_t record);
+
+        /** Set global next address and space remaining counters
+         *
+         * @param data Byte array containing data to write to global stats counters
+         * @return Indicates success or failure reason
+         */
+        int set_global_stats(char *data);     
 
         #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0)
         STM24256 _storage;

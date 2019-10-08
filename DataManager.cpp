@@ -88,18 +88,150 @@ int DataManager::init_filesystem()
         wait_us(5000);
     }
 
+    DataManager_FileSystem::GlobalStats_t g_stats;
+    g_stats.parameters.next_available_address = STORAGE_START_ADDRESS;
+
+    int max_storage_size = get_storage_size_bytes();
+    g_stats.parameters.space_remaining = max_storage_size;
+
+    status = set_global_stats(g_stats.data);
+
+    if(status != DataManager::DATA_MANAGER_OK)
+    {
+        return status;
+    }
+
     return DataManager::DATA_MANAGER_OK;
 }
 
-/** Add new file type entry to the file type table
+
+int DataManager::set_global_stats(char *data)
+{
+    int status = _storage.write_to_address(GLOBAL_STATS_START_ADDRESS, data, GLOBAL_STATS_LENGTH);
+
+    if(status != DataManager::DATA_MANAGER_OK)
+    {
+        return status;
+    }
+
+    return DataManager::DATA_MANAGER_OK;
+}
+
+
+int DataManager::get_global_stats(char *data)
+{
+    int status = _storage.read_from_address(GLOBAL_STATS_START_ADDRESS, data, GLOBAL_STATS_LENGTH);
+
+    if(status != DataManager::DATA_MANAGER_OK)
+    {
+        return status;
+    }
+
+    return DataManager::DATA_MANAGER_OK;
+}
+
+/*
+int DataManager::write_data(uint8_t type_id, char *data)
+{
+    DataManager_FileSystem::FileType_t type;
+
+    int get_type_status = get_file_type_by_type_id(type_id, type);
+
+    if(get_type_status != DataManager::DATA_MANAGER_OK)
+    {
+        return get_type_status;
+    }
+
+    DataManager_FileSystem::FileRecord_t record;
+
+}
+*/
+
+/** Get all FileType_t parameters for a given type_id
+ *
+ * @param type_id ID of file type definition to be retrieved
+ * @param &type Address of FileType_t object in which retrieved information
+ *              will be stored
+ * @return Indicates success or failure reason
+ */
+int DataManager::get_file_type_by_id(uint8_t type_id, DataManager_FileSystem::FileType_t &type)
+{
+    int type_size = sizeof(DataManager_FileSystem::FileType_t);
+
+    uint16_t max_types = get_max_types();
+    bool match = false;
+
+    for(uint16_t type_index = 0; type_index < max_types; type_index++)
+    {
+        int status = _storage.read_from_address(TYPE_STORE_START_ADDRESS + (type_index * type_size), type.data, type_size);
+
+        if(status != DataManager::DATA_MANAGER_OK)
+        {
+            return status;
+        }
+
+        if(!is_valid_file_type(type))
+        {
+            continue;
+        }
+
+        if(type_id == type.parameters.type_id)
+        {
+            match = true;
+            break;
+        }
+    }
+
+    if(!match)
+    {
+        return DataManager::DATA_MANAGER_INVALID_TYPE;
+    }
+    
+    return DataManager::DATA_MANAGER_OK;
+}
+
+/** Add new file type entry to the file type table and allocate a region of
+ *  memory to store file data within
  *
  * @param type FileType_t object representing file type definition to be
  *             stored into persistent storage medium
+ * @param quantity_to_store Number of unique entries of this file type to be stored
  * @return Indicates success or failure reason
  */
-int DataManager::add_file_type(DataManager_FileSystem::FileType_t type)
+int DataManager::add_file_type(DataManager_FileSystem::FileType_t type, uint16_t quantity_to_store)
 {
-    type.parameters.valid = type.parameters.type_id + type.parameters.length_bytes;
+    int requested_space = quantity_to_store * type.parameters.length_bytes;
+
+    DataManager_FileSystem::GlobalStats_t g_stats;
+
+    int g_stats_status = get_global_stats(g_stats.data);
+
+    if(g_stats_status != DataManager::DATA_MANAGER_OK)
+    {
+        return g_stats_status;
+    }
+
+    if(requested_space > g_stats.parameters.space_remaining)
+    {
+        return DataManager::FILE_TYPE_INSUFFICIENT_SPACE;
+    }
+
+    type.parameters.file_start_address = g_stats.parameters.next_available_address;
+    type.parameters.next_available_address = g_stats.parameters.next_available_address;
+    type.parameters.file_end_address = (g_stats.parameters.next_available_address + requested_space) - 1;
+
+    g_stats.parameters.next_available_address = type.parameters.file_end_address + 1;
+    g_stats.parameters.space_remaining = EEPROM_SIZE_BYTES - g_stats.parameters.next_available_address; 
+
+    g_stats_status = set_global_stats(g_stats.data);
+
+    if(g_stats_status != DataManager::DATA_MANAGER_OK)
+    {
+        return g_stats_status;
+    }
+
+    type.parameters.valid = type.parameters.type_id + type.parameters.length_bytes + type.parameters.file_start_address +
+                            type.parameters.file_end_address + type.parameters.next_available_address;
 
     int address = -1;
     int next_address_status = get_next_available_file_type_table_address(address);
@@ -133,7 +265,7 @@ int DataManager::add_file_type(DataManager_FileSystem::FileType_t type)
 int DataManager::add_file_record(DataManager_FileSystem::FileRecord_t record)
 {
     record.parameters.valid = (record.parameters.start_address + record.parameters.length_bytes + 
-                               record.parameters.record_id + record.parameters.type_id);
+                               record.parameters.type_id);
 
     int address = -1;
     int next_address_status = get_next_available_file_record_table_address(address);
@@ -176,7 +308,8 @@ bool DataManager::is_valid_file_type(DataManager_FileSystem::FileType_t type)
     /** Mask the first 24 bits so that we can use our 8-bit valid flag as a rudimentary checksum 
      *  of the length and type id
      */
-    uint32_t checksum = (type.parameters.length_bytes + type.parameters.type_id) & 0x000000FF;
+    uint32_t checksum = (type.parameters.type_id + type.parameters.length_bytes + type.parameters.file_start_address +
+                         type.parameters.file_end_address + type.parameters.next_available_address) & 0x000000FF;
 
     if(type.parameters.valid != checksum)
     {
@@ -199,7 +332,7 @@ bool DataManager::is_valid_file_record(DataManager_FileSystem::FileRecord_t reco
     }
 
     uint32_t checksum = (record.parameters.start_address + record.parameters.length_bytes + 
-                         record.parameters.record_id + record.parameters.type_id) & 0x000000FF;
+                         record.parameters.type_id) & 0x000000FF;
 
     if(record.parameters.valid != checksum)
     {
