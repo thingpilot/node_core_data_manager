@@ -106,9 +106,27 @@ int DataManager::add_file_type(uint8_t type_id, uint16_t length_bytes)
     type.parameters.length_bytes = length_bytes;
     type.parameters.valid = type_id + length_bytes;
 
-    _storage.write_to_address(16, type.data, 4);
+    int address = -1;
+    int next_address_status = get_next_available_file_type_table_address(address);
 
-    return 0;
+    if(next_address_status != DataManager::DATA_MANAGER_OK) 
+    {
+        return next_address_status;
+    }
+
+    if(address == -1)
+    {
+        return DataManager::FILE_TYPE_TABLE_FULL;
+    }
+
+    int write_status = _storage.write_to_address(address, type.data, sizeof(type));
+
+    if(write_status != DataManager::DATA_MANAGER_OK)
+    {
+        return write_status;
+    }
+
+    return DataManager::DATA_MANAGER_OK;
 }
 
 /** Perform checksum on given FileType_t using the 'valid' parameter
@@ -185,8 +203,6 @@ int DataManager::get_next_available_file_type_table_address(int &next_available_
     int type_size = sizeof(type);
     
     uint16_t max_types = get_max_types();
-
-    next_available_address = -1;
 
     for(uint16_t type_index = 0; type_index < max_types; type_index++)
     {
