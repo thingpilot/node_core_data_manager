@@ -71,7 +71,8 @@ class DataManager
 
         enum
         {
-            DATA_MANAGER_OK = 0
+            DATA_MANAGER_OK      = 0,
+            FILE_TYPE_TABLE_FULL = 1
         };
 
         #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0)
