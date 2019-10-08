@@ -154,7 +154,6 @@ bool DataManager::is_valid_file_type(DataManager_FileSystem::FileType_t type)
         return false;
     }
 
-
     return true;
 }
 
@@ -263,6 +262,41 @@ int DataManager::get_next_available_file_type_table_address(int &next_available_
         }
 
         if(!is_valid_file_type(type))
+        {
+            next_available_address = address;
+            break;
+        }
+    }
+
+    return DataManager::DATA_MANAGER_OK;
+}
+
+/** Determine the next available address to which to write file records
+ *
+ * @param &next_available_address Address of integer value in which the address
+ *                                of the next available location in memory to which
+ *                                you can write a file record entry is stored. -1 if 
+ *                                there are no available spaces
+ * @return Indicates success or failure reason
+ */
+int DataManager::get_next_available_file_record_table_address(int &next_available_address)
+{
+    DataManager_FileSystem::FileRecord_t record;
+    int record_size = sizeof(record);
+
+    int max_records = get_max_records();
+
+    for(int record_index = 0; record_index < max_records; record_index++)
+    {
+        int address = RECORD_STORE_START_ADDRESS + (record_index * record_size);
+        int status = _storage.read_from_address(address, record.data, record_size);
+
+        if(status != DataManager::DATA_MANAGER_OK)
+        {
+            return status;
+        }
+
+        if(!is_valid_file_record(record))
         {
             next_available_address = address;
             break;
