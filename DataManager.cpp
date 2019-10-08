@@ -189,6 +189,31 @@ int DataManager::total_stored_file_type_entries(int &valid_entries)
     return DataManager::DATA_MANAGER_OK;
 }
 
+/** Calculate total number of spaces available in the file type definition table
+ *  for new entries
+ *
+ * @param &remaining_entries Address of integer value in which the total number
+ *                           of spaces available in the file type table is to be
+ *                           written
+ * @return Indicates success or failure reason
+ */
+int DataManager::total_remaining_file_type_entries(int &remaining_entries)
+{
+    int valid_entries = 0;
+    int status = total_stored_file_type_entries(valid_entries);
+
+    if(status != DataManager::DATA_MANAGER_OK)
+    {
+        return status; 
+    }
+
+    uint16_t max_types = get_max_types();
+
+    remaining_entries = max_types - valid_entries;
+
+    return DataManager::DATA_MANAGER_OK;
+}
+
 /** Determine the next available address to which to write file type definition
  *
  * @param &next_available_address Address of integer value in which the address

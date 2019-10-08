@@ -124,6 +124,16 @@ class DataManager
          */
         int total_stored_file_type_entries(int &valid_entries);
 
+        /** Calculate total number of spaces available in the file type definition table
+         *  for new entries
+         *
+         * @param &remaining_entries Address of integer value in which the total number
+         *                           of spaces available in the file type table is to be
+         *                           written
+         * @return Indicates success or failure reason
+         */
+        int total_remaining_file_type_entries(int &remaining_entries);
+
         /** Determine the next available address to which to write file type definition
          *
          * @param &next_available_address Address of integer value in which the address
