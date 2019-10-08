@@ -71,8 +71,9 @@ class DataManager
 
         enum
         {
-            DATA_MANAGER_OK      = 0,
-            FILE_TYPE_TABLE_FULL = 1
+            DATA_MANAGER_OK        = 0,
+            FILE_TYPE_TABLE_FULL   = 1,
+            FILE_RECORD_TABLE_FULL = 2
         };
 
         #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0)
@@ -114,7 +115,15 @@ class DataManager
          *                     equivalent to sizeof(yourStruct)
          * @return Indicates success or failure reason
          */
-        int add_file_type(uint8_t type_id, uint16_t length_bytes);
+        int add_file_type(DataManager_FileSystem::FileType_t type);
+
+        /** Add new file record entry to the file record table
+         *
+         * @param record FileRecord_t object representing file record to be
+         *               stored into persistent storage medium
+         * @return Indicates success or failure reason
+         */
+        int add_file_record(DataManager_FileSystem::FileRecord_t record);
 
         /** Calculate the number of valid file type definitions currently 
          *  stored in memory
@@ -123,6 +132,14 @@ class DataManager
          * @return Indicates success or failure reason                        
          */
         int total_stored_file_type_entries(int &valid_entries);
+
+        /** Calculate the number of valid file type records currently 
+         *  stored in memory
+         * @param &valid_entries Address of integer value in which number of 
+         *                       detected valid entries will be stored
+         * @return Indicates success or failure reason                        
+         */
+        int total_stored_file_record_entries(int &valid_entries);
 
         /** Calculate total number of spaces available in the file type definition table
          *  for new entries
@@ -133,6 +150,16 @@ class DataManager
          * @return Indicates success or failure reason
          */
         int total_remaining_file_type_entries(int &remaining_entries);
+
+        /** Calculate total number of spaces available in the file record table
+         *  for new entries
+         *
+         * @param &remaining_entries Address of integer value in which the total number
+         *                           of spaces available in the file record table is to be
+         *                           written
+         * @return Indicates success or failure reason
+         */
+        int total_remaining_file_record_entries(int &remaining_entries);
 
         /** Determine the next available address to which to write file type definition
          *

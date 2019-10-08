@@ -10,7 +10,6 @@
  */
 #include "DataManager.h"
 
-
 #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0)
 DataManager::DataManager(PinName write_control, PinName sda, PinName scl, int frequency_hz) : 
                          _storage(write_control, sda, scl, frequency_hz)
@@ -94,17 +93,13 @@ int DataManager::init_filesystem()
 
 /** Add new file type entry to the file type table
  *
- * @param type_id Enumerated value of the file type to be added
- * @param length_bytes Size of the sum of the struct's components,
- *                     equivalent to sizeof(yourStruct), in bytes
+ * @param type FileType_t object representing file type definition to be
+ *             stored into persistent storage medium
  * @return Indicates success or failure reason
  */
-int DataManager::add_file_type(uint8_t type_id, uint16_t length_bytes)
+int DataManager::add_file_type(DataManager_FileSystem::FileType_t type)
 {
-    DataManager_FileSystem::FileType_t type;
-    type.parameters.type_id = type_id;
-    type.parameters.length_bytes = length_bytes;
-    type.parameters.valid = type_id + length_bytes;
+    type.parameters.valid = type.parameters.type_id + type.parameters.length_bytes;
 
     int address = -1;
     int next_address_status = get_next_available_file_type_table_address(address);
@@ -120,6 +115,40 @@ int DataManager::add_file_type(uint8_t type_id, uint16_t length_bytes)
     }
 
     int write_status = _storage.write_to_address(address, type.data, sizeof(type));
+
+    if(write_status != DataManager::DATA_MANAGER_OK)
+    {
+        return write_status;
+    }
+
+    return DataManager::DATA_MANAGER_OK;
+}
+
+/** Add new file record entry to the file record table
+ *
+ * @param record FileRecord_t object representing file record to be
+ *               stored into persistent storage medium
+ * @return Indicates success or failure reason
+ */
+int DataManager::add_file_record(DataManager_FileSystem::FileRecord_t record)
+{
+    record.parameters.valid = (record.parameters.start_address + record.parameters.length_bytes + 
+                               record.parameters.record_id + record.parameters.type_id);
+
+    int address = -1;
+    int next_address_status = get_next_available_file_record_table_address(address);
+
+    if(next_address_status != DataManager::DATA_MANAGER_OK)
+    {
+        return next_address_status;
+    }
+
+    if(address == -1)
+    {
+        return DataManager::FILE_RECORD_TABLE_FULL;
+    }
+
+    int write_status = _storage.write_to_address(address, record.data, sizeof(record));
 
     if(write_status != DataManager::DATA_MANAGER_OK)
     {
@@ -211,6 +240,37 @@ int DataManager::total_stored_file_type_entries(int &valid_entries)
     return DataManager::DATA_MANAGER_OK;
 }
 
+/** Calculate the number of valid file type records currently 
+ *  stored in memory
+ * @param &valid_entries Address of integer value in which number of 
+ *                       detected valid entries will be stored
+ * @return Indicates success or failure reason                        
+ */
+int DataManager::total_stored_file_record_entries(int &valid_entries)
+{
+    DataManager_FileSystem::FileRecord_t record;
+    int record_size = sizeof(record);
+
+    int max_records = get_max_records();
+
+    for(uint16_t record_index = 0; record_index < max_records; record_index++)
+    {
+        int status = _storage.read_from_address(RECORD_STORE_START_ADDRESS + (record_index * record_size), record.data, record_size);
+
+        if(status != DataManager::DATA_MANAGER_OK)
+        {
+            return status;
+        }
+
+        if(is_valid_file_record(record))
+        {
+            valid_entries++;
+        }
+    }
+
+    return DataManager::DATA_MANAGER_OK;
+}
+
 /** Calculate total number of spaces available in the file type definition table
  *  for new entries
  *
@@ -232,6 +292,31 @@ int DataManager::total_remaining_file_type_entries(int &remaining_entries)
     uint16_t max_types = get_max_types();
 
     remaining_entries = max_types - valid_entries;
+
+    return DataManager::DATA_MANAGER_OK;
+}
+
+/** Calculate total number of spaces available in the file record table
+ *  for new entries
+ *
+ * @param &remaining_entries Address of integer value in which the total number
+ *                           of spaces available in the file record table is to be
+ *                           written
+ * @return Indicates success or failure reason
+ */
+int DataManager::total_remaining_file_record_entries(int &remaining_entries)
+{
+    int valid_entries = 0;
+    int status = total_stored_file_record_entries(valid_entries);
+
+    if(status != DataManager::DATA_MANAGER_OK)
+    {
+        return status;
+    }
+
+    int max_records = get_max_records();
+
+    remaining_entries = max_records - valid_entries;
 
     return DataManager::DATA_MANAGER_OK;
 }
