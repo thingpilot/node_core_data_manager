@@ -3,12 +3,13 @@
   * @version 0.1.0
   * @author  Rafaella Neofytou, Adam Mitchell
   * @brief   C++ file of the DataManager. Provides a very lightweight filesystem to facilitate the
-  *          storage of arbritrary file types
+  *          storage of arbitrary file types
   */
 
 /** Includes
  */
 #include "DataManager.h"
+
 
 #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0)
 DataManager::DataManager(PinName write_control, PinName sda, PinName scl, int frequency_hz) : 
@@ -25,26 +26,8 @@ DataManager::~DataManager()
     #endif /* #if defined (_PERSISTENT_STORAGE_DRIVER) && (_PERSISTENT_STORAGE_DRIVER == STM24256) */
 }
 
-/** Return maximum number of file type definitions that can be stored
- *  in persistent storage
- *
- *  @return Maximum number of file type definitions that can be stored
- */
-uint16_t DataManager::get_max_types()
-{
-	return (uint16_t)TYPE_STORE_LENGTH / sizeof(DataManager_FileSystem::FileType_t);
-}
-
-/** Return overall total file storage size in bytes
- *
- *  @return Total usable space, in bytes, for file storage
- */
-int DataManager::get_storage_size_bytes()
-{
-	return (int)STORAGE_LENGTH;
-}
-
-/** Initialise the file type and record tables to all zeros
+/** Initialise the file table to all zeros, set file system initialised flag 
+ *  and set g_stats next available address and space remaining 
  *
  * @return Indicates success or failure reason
  */
@@ -54,9 +37,9 @@ int DataManager::init_filesystem()
 
     int status;
 
-    for(int ts_page = 0; ts_page < TYPE_STORE_PAGES; ts_page++)
+    for(int ft_page = 0; ft_page < FILE_TABLE_PAGES; ft_page++)
     {
-        status = _storage.write_to_address(TYPE_STORE_START_ADDRESS + (ts_page * PAGE_SIZE_BYTES), blank, PAGE_SIZE_BYTES);
+        status = _storage.write_to_address(FILE_TABLE_START_ADDRESS + (ft_page * PAGE_SIZE_BYTES), blank, PAGE_SIZE_BYTES);
 
         if(status != DataManager::DATA_MANAGER_OK)
         {
@@ -71,6 +54,7 @@ int DataManager::init_filesystem()
 
     int max_storage_size = get_storage_size_bytes();
     g_stats.parameters.space_remaining = max_storage_size;
+    g_stats.parameters.initialised = DataManager_FileSystem::INITIALISED; 
 
     status = set_global_stats(g_stats.data);
 
@@ -82,20 +66,39 @@ int DataManager::init_filesystem()
     return DataManager::DATA_MANAGER_OK;
 }
 
-
-int DataManager::set_global_stats(char *data)
+/** Determine whether or not the filesystem has been initialised
+ *
+ * @param &initialised Address of boolean value to which result of 
+ *                     an initialisation check is stored. True on 
+ *                     initialised, else false
+ * @return Indicates success or failure reason
+ */
+int DataManager::is_initialised(bool &initialised)
 {
-    int status = _storage.write_to_address(GLOBAL_STATS_START_ADDRESS, data, GLOBAL_STATS_LENGTH);
+    DataManager_FileSystem::GlobalStats_t g_stats;
+    
+    int status = get_global_stats(g_stats.data);
 
     if(status != DataManager::DATA_MANAGER_OK)
     {
         return status;
     }
 
+    if(g_stats.parameters.initialised != DataManager_FileSystem::INITIALISED)
+    {
+        initialised = false;
+    }
+
+    initialised = true;
+
     return DataManager::DATA_MANAGER_OK;
 }
 
-
+/** Get global next address and space remaining counters
+ *
+ * @param *data Byte array to which to write global stats counters
+ * @return Indicates success or failure reason
+ */
 int DataManager::get_global_stats(char *data)
 {
     int status = _storage.read_from_address(GLOBAL_STATS_START_ADDRESS, data, GLOBAL_STATS_LENGTH);
@@ -108,60 +111,35 @@ int DataManager::get_global_stats(char *data)
     return DataManager::DATA_MANAGER_OK;
 }
 
-/** Get all FileType_t parameters for a given type_id
+/** Return maximum number of files that can be stored
+ *  in persistent storage
  *
- * @param type_id ID of file type definition to be retrieved
- * @param &type Address of FileType_t object in which retrieved information
- *              will be stored
- * @return Indicates success or failure reason
+ *  @return Maximum number of files that can be stored
  */
-int DataManager::get_file_type_by_id(uint8_t type_id, DataManager_FileSystem::FileType_t &type)
+uint16_t DataManager::get_max_files()
 {
-    int type_size = sizeof(DataManager_FileSystem::FileType_t);
-
-    uint16_t max_types = get_max_types();
-    bool match = false;
-
-    for(uint16_t type_index = 0; type_index < max_types; type_index++)
-    {
-        int status = _storage.read_from_address(TYPE_STORE_START_ADDRESS + (type_index * type_size), type.data, type_size);
-
-        if(status != DataManager::DATA_MANAGER_OK)
-        {
-            return status;
-        }
-
-        if(!is_valid_file_type(type))
-        {
-            continue;
-        }
-
-        if(type_id == type.parameters.type_id)
-        {
-            match = true;
-            break;
-        }
-    }
-
-    if(!match)
-    {
-        return DataManager::DATA_MANAGER_INVALID_TYPE;
-    }
-    
-    return DataManager::DATA_MANAGER_OK;
+	return (uint16_t)FILE_TABLE_LENGTH / sizeof(DataManager_FileSystem::File_t);
 }
 
-/** Add new file type entry to the file type table and allocate a region of
- *  memory to store file data within
+/** Return overall total file entry storage size in bytes
  *
- * @param type FileType_t object representing file type definition to be
- *             stored into persistent storage medium
- * @param quantity_to_store Number of unique entries of this file type to be stored
+ *  @return Total usable space, in bytes, for file entry storage
+ */
+int DataManager::get_storage_size_bytes()
+{
+	return (int)STORAGE_LENGTH;
+}
+
+/** Add new file to the file table and allocate a region of
+ *  memory within which to store entries to the file
+ *
+ * @param file File_t object representing the file to be stored
+ * @param entries_to_store Number of unique entries of this file type to be stored
  * @return Indicates success or failure reason
  */
-int DataManager::add_file_type(DataManager_FileSystem::FileType_t type, uint16_t quantity_to_store)
+int DataManager::add_file(DataManager_FileSystem::File_t file, uint16_t entries_to_store)
 {
-    int requested_space = quantity_to_store * type.parameters.length_bytes;
+    int requested_space = entries_to_store * file.parameters.length_bytes;
 
     DataManager_FileSystem::GlobalStats_t g_stats;
 
@@ -174,14 +152,14 @@ int DataManager::add_file_type(DataManager_FileSystem::FileType_t type, uint16_t
 
     if(requested_space > g_stats.parameters.space_remaining)
     {
-        return DataManager::FILE_TYPE_INSUFFICIENT_SPACE;
+        return DataManager_FileSystem::FILE_TABLE_FULL;
     }
 
-    type.parameters.file_start_address = g_stats.parameters.next_available_address;
-    type.parameters.next_available_address = g_stats.parameters.next_available_address;
-    type.parameters.file_end_address = (g_stats.parameters.next_available_address + requested_space) - 1;
+    file.parameters.file_start_address = g_stats.parameters.next_available_address;
+    file.parameters.next_available_address = g_stats.parameters.next_available_address;
+    file.parameters.file_end_address = (g_stats.parameters.next_available_address + requested_space) - 1;
 
-    g_stats.parameters.next_available_address = type.parameters.file_end_address + 1;
+    g_stats.parameters.next_available_address = file.parameters.file_end_address + 1;
     g_stats.parameters.space_remaining = EEPROM_SIZE_BYTES - g_stats.parameters.next_available_address; 
 
     g_stats_status = set_global_stats(g_stats.data);
@@ -191,11 +169,11 @@ int DataManager::add_file_type(DataManager_FileSystem::FileType_t type, uint16_t
         return g_stats_status;
     }
 
-    type.parameters.valid = type.parameters.type_id + type.parameters.length_bytes + type.parameters.file_start_address +
-                            type.parameters.file_end_address + type.parameters.next_available_address;
+    file.parameters.valid = file.parameters.filename + file.parameters.length_bytes + file.parameters.file_start_address +
+                            file.parameters.file_end_address + file.parameters.next_available_address;
 
     int address = -1;
-    int next_address_status = get_next_available_file_type_table_address(address);
+    int next_address_status = get_next_available_file_table_address(address);
 
     if(next_address_status != DataManager::DATA_MANAGER_OK) 
     {
@@ -204,10 +182,10 @@ int DataManager::add_file_type(DataManager_FileSystem::FileType_t type, uint16_t
 
     if(address == -1)
     {
-        return DataManager::FILE_TYPE_TABLE_FULL;
+        return DataManager_FileSystem::FILE_TABLE_FULL;
     }
 
-    int write_status = _storage.write_to_address(address, type.data, sizeof(type));
+    int write_status = _storage.write_to_address(address, file.data, sizeof(file));
 
     if(write_status != DataManager::DATA_MANAGER_OK)
     {
@@ -217,220 +195,118 @@ int DataManager::add_file_type(DataManager_FileSystem::FileType_t type, uint16_t
     return DataManager::DATA_MANAGER_OK;
 }
 
-/** Perform checksum on given FileType_t using the 'valid' parameter
+/** Get all File_t parameters for a given filename
  *
- * @param type File type defintion to be checked for validity
- * @return True if file type entry is valid, else false
+ * @param filename ID of file to be retrieved
+ * @param &file Address of File_t object in which retrieved information
+ *              will be stored
+ * @return Indicates success or failure reason
  */
-bool DataManager::is_valid_file_type(DataManager_FileSystem::FileType_t type)
+int DataManager::get_file_by_name(uint8_t filename, DataManager_FileSystem::File_t &file)
 {
-    /** During init_filesystem() we set every bit in the type and record tables to 0
-     *  so, if the valid byte == 0, this can't be a valid entry
-     */
-    if(type.parameters.valid == 0x00)
+    int file_size = sizeof(DataManager_FileSystem::File_t);
+
+    uint16_t max_files = get_max_files();
+    bool match = false;
+
+    for(uint16_t file_index = 0; file_index < max_files; file_index++)
     {
-        return false;
-    }
-    
-    /** Mask the first 24 bits so that we can use our 8-bit valid flag as a rudimentary checksum 
-     *  of the length and type id
-     */
-    uint32_t checksum = (type.parameters.type_id + type.parameters.length_bytes + type.parameters.file_start_address +
-                         type.parameters.file_end_address + type.parameters.next_available_address) & 0x000000FF;
-
-    if(type.parameters.valid != checksum)
-    {
-        return false;
-    }
-
-    return true;
-}
-
-/** Calculate the number of valid file type definitions currently 
- *  stored in memory
- * @param &valid_entries Address of integer value in which number of 
- *                       detected valid entries will be stored
- * @return Indicates success or failure reason                        
- */
-int DataManager::total_stored_file_type_entries(int &valid_entries)
-{
-    DataManager_FileSystem::FileType_t type;
-    int type_size = sizeof(type);
-    
-    uint16_t max_types = get_max_types();
-
-    for(uint16_t type_index = 0; type_index < max_types; type_index++)
-    {
-        int status = _storage.read_from_address(TYPE_STORE_START_ADDRESS + (type_index * type_size), type.data, type_size);
+        int status = _storage.read_from_address(FILE_TABLE_START_ADDRESS + (file_index * file_size), file.data, file_size);
 
         if(status != DataManager::DATA_MANAGER_OK)
         {
             return status;
         }
 
-        if(is_valid_file_type(type))
+        if(!is_valid_file(file))
         {
-            valid_entries++;
+            continue;
+        }
+
+        if(filename == file.parameters.filename)
+        {
+            match = true;
+            break;
+        }
+    }
+
+    if(!match)
+    {
+        return DataManager_FileSystem::FILE_INVALID_NAME;
+    }
+    
+    return DataManager::DATA_MANAGER_OK;
+}
+
+/** Calculate the number of valid files current stored in memory
+ * @param &valid_files   Address of integer value in which number of 
+ *                       detected valid files will be stored
+ * @return Indicates success or failure reason                        
+ */
+int DataManager::total_stored_files(int &valid_files)
+{
+    DataManager_FileSystem::File_t file;
+    int file_size = sizeof(file);
+    
+    uint16_t max_files = get_max_files();
+
+    for(uint16_t file_index = 0; file_index < max_files; file_index++)
+    {
+        int status = _storage.read_from_address(FILE_TABLE_START_ADDRESS + (file_index * file_size), file.data, file_size);
+
+        if(status != DataManager::DATA_MANAGER_OK)
+        {
+            return status;
+        }
+
+        if(is_valid_file(file))
+        {
+            valid_files++;
         }
     }
 
     return DataManager::DATA_MANAGER_OK;
 }
 
-/** Calculate total number of spaces available in the file type definition table
+/** Calculate total number of spaces available in the file table
  *  for new entries
  *
- * @param &remaining_entries Address of integer value in which the total number
- *                           of spaces available in the file type table is to be
- *                           written
+ * @param &remaining_files Address of integer value in which the total number
+ *                         of spaces available in the file table is to be
+ *                         written
  * @return Indicates success or failure reason
  */
-int DataManager::total_remaining_file_type_entries(int &remaining_entries)
+int DataManager::total_remaining_file_table_entries(int &remaining_files)
 {
-    int valid_entries = 0;
-    int status = total_stored_file_type_entries(valid_entries);
+    int valid_files = 0;
+    int status = total_stored_files(valid_files);
 
     if(status != DataManager::DATA_MANAGER_OK)
     {
         return status; 
     }
 
-    uint16_t max_types = get_max_types();
+    uint16_t max_files = get_max_files();
 
-    remaining_entries = max_types - valid_entries;
-
-    return DataManager::DATA_MANAGER_OK;
-}
-
-/** Determine the next available address to which to write file type definition
- *
- * @param &next_available_address Address of integer value in which the address
- *                                of the next available location in memory to which
- *                                you can write a file type entry is stored. -1 if 
- *                                there are no available spaces
- * @return Indicates success or failure reason
- */
-int DataManager::get_next_available_file_type_table_address(int &next_available_address)
-{
-    DataManager_FileSystem::FileType_t type;
-    int type_size = sizeof(type);
-    
-    uint16_t max_types = get_max_types();
-
-    for(uint16_t type_index = 0; type_index < max_types; type_index++)
-    {
-        int address = TYPE_STORE_START_ADDRESS + (type_index * type_size);
-        int status = _storage.read_from_address(address, type.data, type_size);
-
-        if(status != DataManager::DATA_MANAGER_OK)
-        {
-            return status;
-        }
-
-        if(!is_valid_file_type(type))
-        {
-            next_available_address = address;
-            break;
-        }
-    }
+    remaining_files = max_files - valid_files;
 
     return DataManager::DATA_MANAGER_OK;
 }
 
-/** Calculate number of entries within a file
+/** Read an entry, i.e. actual data such as a measurement, from a 
+ *  specific index within a file
  *
- * @param type_id ID of the file to be queried
- * @param &written_entries Address of integer value to which the number
- *                         of written entries should be stored
- * @return Indicates success or failure reason
- */
-int DataManager::get_total_written_file_entries(uint8_t type_id, int &written_entries)
-{
-    DataManager_FileSystem::FileType_t type;
-
-    int status = get_file_type_by_id(type_id, type);
-
-    if(status != DataManager::DATA_MANAGER_OK)
-    {
-        return status;
-    }
-
-    int remaining_length = (type.parameters.file_end_address + 1) 
-                          - type.parameters.next_available_address;
-
-    int remaining_entries = remaining_length / type.parameters.length_bytes;
-
-    int total_entries = ((type.parameters.file_end_address - type.parameters.file_start_address) + 1 ) 
-                        / type.parameters.length_bytes;
-
-    written_entries = total_entries - remaining_entries;
-
-    return DataManager::DATA_MANAGER_OK;
-}
-
-/** Calculate number of measurements that can be stored
- *
- * @param type_id ID of the file to be queried
- * @param &remaining_entries Address of integer value to which the number
- *                           of remaining measurements should be stored
- * @return Indicates success or failure reason
- */
-int DataManager::get_remaining_file_entries(uint8_t type_id, int &remaining_entries)
-{
-    DataManager_FileSystem::FileType_t type;
-
-    int status = get_file_type_by_id(type_id, type);
-
-    if(status != DataManager::DATA_MANAGER_OK)
-    {
-        return status;
-    }
-
-    int remaining_length = (type.parameters.file_end_address + 1) 
-                          - type.parameters.next_available_address;
-
-    remaining_entries = remaining_length / type.parameters.length_bytes;
-
-    return DataManager::DATA_MANAGER_OK;
-}
-
-/** Calculate remaining space for measurement in bytes
- *
- * @param type_id ID of the file to be queried
- * @param &remaining_entries Address of integer value to which the amount
- *                           of remaining space should be stored
- * @return Indicates success or failure reason
- */
-int DataManager::get_remaining_file_size(uint8_t type_id, int &remaining_bytes)
-{
-    DataManager_FileSystem::FileType_t type;
-
-    int status = get_file_type_by_id(type_id, type);
-
-    if(status != DataManager::DATA_MANAGER_OK)
-    {
-        return status;
-    }
-
-    remaining_bytes = (type.parameters.file_end_address + 1) 
-                     - type.parameters.next_available_address;
-
-    return DataManager::DATA_MANAGER_OK;
-}
-
-/** Read actual data, i.e. a measurement, from a specific index within a file
- *
- * @param type_id ID of the file from which we should read
+ * @param filename ID of the file from which we should read
  * @param entry_index 0-indexed position of the entry to be read
  * @param *data Pointer to an array in which the read data will be stored
  * @param data_length Length of *data in bytes
  * @return Indicates success or failure reason
  */
-int DataManager::read_file_entry(uint8_t type_id, int entry_index, char *data, int data_length)
+int DataManager::read_file_entry(uint8_t filename, int entry_index, char *data, int data_length)
 {
-    DataManager_FileSystem::FileType_t type;
+    DataManager_FileSystem::File_t file;
 
-    int status = get_file_type_by_id(type_id, type);
+    int status = get_file_by_name(filename, file);
 
     if(status != DataManager::DATA_MANAGER_OK)
     {
@@ -438,7 +314,7 @@ int DataManager::read_file_entry(uint8_t type_id, int entry_index, char *data, i
     }
 
     int total_written_entries = 0;
-    status = get_total_written_file_entries(type_id, total_written_entries);
+    status = get_total_written_file_entries(filename, total_written_entries);
 
     if(status != DataManager::DATA_MANAGER_OK)
     {
@@ -447,15 +323,15 @@ int DataManager::read_file_entry(uint8_t type_id, int entry_index, char *data, i
 
     if(entry_index + 1 > total_written_entries)
     {
-        return DataManager::FILE_ENTRY_INVALID;
+        return DataManager_FileSystem::FILE_ENTRY_INVALID_INDEX;
     }
 
-    if(data_length != type.parameters.length_bytes)
+    if(data_length != file.parameters.length_bytes)
     {
-        return DataManager::FILE_TYPE_LENGTH_MISMATCH;
+        return DataManager_FileSystem::FILE_ENTRY_LENGTH_MISMATCH;
     }
 
-    uint16_t address = type.parameters.file_start_address + (entry_index * data_length);
+    uint16_t address = file.parameters.file_start_address + (entry_index * data_length);
     status = _storage.read_from_address(address, data, data_length);
 
     if(status != DataManager::DATA_MANAGER_OK)
@@ -466,39 +342,39 @@ int DataManager::read_file_entry(uint8_t type_id, int entry_index, char *data, i
     return DataManager::DATA_MANAGER_OK;
 }
 
-/** Write actual data, i.e. a measurement, to next available address
- *  within the files allocated memory region
+/** Write an entry, i.e. actual data such as a measurement, to next 
+ *  available address within the files allocated memory region
  *
- * @param type_id ID of the file to which we should append data
+ * @param filename ID of the file to which we should append data
  * @param *data Actual data to be written to file
  * @param data_length Length of *data in bytes
  * @return Indicates success or failure reason
  */
-int DataManager::append_to_file(uint8_t type_id, char *data, int data_length)
+int DataManager::append_file_entry(uint8_t filename, char *data, int data_length)
 {
-    DataManager_FileSystem::FileType_t type;
+    DataManager_FileSystem::File_t file;
 
-    int status = get_file_type_by_id(type_id, type);
+    int status = get_file_by_name(filename, file);
 
     if(status != DataManager::DATA_MANAGER_OK)
     {
         return status;
     }
 
-    if(data_length != type.parameters.length_bytes)
+    if(data_length != file.parameters.length_bytes)
     {
-        return DataManager::FILE_TYPE_LENGTH_MISMATCH;
+        return DataManager_FileSystem::FILE_ENTRY_LENGTH_MISMATCH;
     }
 
-    if((data_length - 1) + type.parameters.next_available_address 
-       > type.parameters.file_end_address)
+    if((data_length - 1) + file.parameters.next_available_address 
+       > file.parameters.file_end_address)
     {
-        return DataManager::FILE_CONTENTS_INSUFFICIENT_SPACE;
+        return DataManager_FileSystem::FILE_ENTRY_FULL;
     }
 
     /** Write actual data, i.e. a measurement, to the next available address 
      */
-    status = _storage.write_to_address(type.parameters.next_available_address, 
+    status = _storage.write_to_address(file.parameters.next_available_address, 
                                        data, data_length);
 
     if(status != DataManager::DATA_MANAGER_OK)
@@ -506,16 +382,16 @@ int DataManager::append_to_file(uint8_t type_id, char *data, int data_length)
         return status;
     }
 
-    type.parameters.next_available_address += data_length;
-    type.parameters.valid = type.parameters.type_id + 
-                            type.parameters.length_bytes + 
-                            type.parameters.file_start_address +
-                            type.parameters.file_end_address + 
-                            type.parameters.next_available_address;
+    file.parameters.next_available_address += data_length;
+    file.parameters.valid = file.parameters.filename + 
+                            file.parameters.length_bytes + 
+                            file.parameters.file_start_address +
+                            file.parameters.file_end_address + 
+                            file.parameters.next_available_address;
     
     /** Update the next available address and validity byte
      */
-    status = modify_file_type(type_id, type);
+    status = modify_file(filename, file);
 
     if(status != DataManager::DATA_MANAGER_OK)
     {
@@ -526,31 +402,31 @@ int DataManager::append_to_file(uint8_t type_id, char *data, int data_length)
 }
 
 /** By resetting the next available address to the file start address
- *  we essentially 'delete' all contents of the file while retaining the
- *  actual data until it is overwritten
+ *  we essentially 'delete' all entries within the file whilst 
+ *  retaining the actual data until it is overwritten
  *
- * @param type_id ID of the file type definition whose contents are to be cleared
+ * @param filename ID of the file whose entries are to be cleared
  * @return Indicates success or failure reason
  */  
-int DataManager::delete_file_contents(uint8_t type_id)
+int DataManager::delete_file_entries(uint8_t filename)
 {
-    DataManager_FileSystem::FileType_t type;
+    DataManager_FileSystem::File_t file;
 
-    int status = get_file_type_by_id(type_id, type);
+    int status = get_file_by_name(filename, file);
 
     if(status != DataManager::DATA_MANAGER_OK)
     {
         return status;
     }
 
-    type.parameters.next_available_address = type.parameters.file_start_address;
-    type.parameters.valid = type.parameters.type_id + 
-                            type.parameters.length_bytes + 
-                            type.parameters.file_start_address +
-                            type.parameters.file_end_address + 
-                            type.parameters.next_available_address;
+    file.parameters.next_available_address = file.parameters.file_start_address;
+    file.parameters.valid = file.parameters.filename + 
+                            file.parameters.length_bytes + 
+                            file.parameters.file_start_address +
+                            file.parameters.file_end_address + 
+                            file.parameters.next_available_address;
 
-    status = modify_file_type(type_id, type);
+    status = modify_file(filename, file);
 
     if(status != DataManager::DATA_MANAGER_OK)
     {
@@ -560,33 +436,33 @@ int DataManager::delete_file_contents(uint8_t type_id)
     return DataManager::DATA_MANAGER_OK;
 }
 
-/** Write actual data, i.e. a measurement, to the first address
- *  within the files allocated memory region
+/** Write an entry, i.e. actual data such as a measurement, to the 
+ *  first address within the files allocated memory region
  *
- * @param type_id ID of the file to which we should append data
+ * @param filename ID of the file to which we should write data
  * @param *data Actual data to be written to file
  * @param data_length Length of *data in bytes
  * @return Indicates success or failure reason
  */
-int DataManager::overwrite_file(uint8_t type_id, char *data, int data_length)
+int DataManager::overwrite_file_entries(uint8_t filename, char *data, int data_length)
 {
-    DataManager_FileSystem::FileType_t type;
+    DataManager_FileSystem::File_t file;
 
-    int status = get_file_type_by_id(type_id, type);
+    int status = get_file_by_name(filename, file);
 
     if(status != DataManager::DATA_MANAGER_OK)
     {
         return status;
     }
 
-    if(data_length != type.parameters.length_bytes)
+    if(data_length != file.parameters.length_bytes)
     {
-        return DataManager::FILE_TYPE_LENGTH_MISMATCH;
+        return DataManager_FileSystem::FILE_ENTRY_LENGTH_MISMATCH;
     }
 
     /** Write actual data, i.e. a measurement, to the start address 
      */
-    status = _storage.write_to_address(type.parameters.file_start_address, 
+    status = _storage.write_to_address(file.parameters.file_start_address, 
                                        data, data_length);
 
     if(status != DataManager::DATA_MANAGER_OK)
@@ -594,16 +470,16 @@ int DataManager::overwrite_file(uint8_t type_id, char *data, int data_length)
         return status;
     }
 
-    type.parameters.next_available_address = type.parameters.file_start_address + data_length;
-    type.parameters.valid = type.parameters.type_id + 
-                            type.parameters.length_bytes + 
-                            type.parameters.file_start_address +
-                            type.parameters.file_end_address + 
-                            type.parameters.next_available_address;
+    file.parameters.next_available_address = file.parameters.file_start_address + data_length;
+    file.parameters.valid = file.parameters.filename + 
+                            file.parameters.length_bytes + 
+                            file.parameters.file_start_address +
+                            file.parameters.file_end_address + 
+                            file.parameters.next_available_address;
     
     /** Update the next available address and validity byte
      */
-    status = modify_file_type(type_id, type);
+    status = modify_file(filename, file);
 
     if(status != DataManager::DATA_MANAGER_OK)
     {
@@ -613,44 +489,205 @@ int DataManager::overwrite_file(uint8_t type_id, char *data, int data_length)
     return DataManager::DATA_MANAGER_OK;
 }
 
-
-int DataManager::truncate_file(uint8_t type_id, int entries_to_truncate)
+int DataManager::truncate_file(uint8_t filename, int entries_to_truncate)
 {
     return 0;
 }
 
-/** Modify file type definition
+/** Calculate number of entries within a file
  *
- * @param type_id ID of file type definition to be modified
- * @param type Updated version of file type definition
+ * @param filename ID of the file to be queried
+ * @param &written_entries Address of integer value to which the number
+ *                         of written entries should be stored
  * @return Indicates success or failure reason
  */
-int DataManager::modify_file_type(uint8_t type_id, DataManager_FileSystem::FileType_t type)
+int DataManager::get_total_written_file_entries(uint8_t filename, int &written_entries)
 {
-    uint16_t max_types = get_max_types();
-    int type_size = sizeof(type);
-    
-    bool match = false;
-    uint16_t address;
+    DataManager_FileSystem::File_t file;
 
-    DataManager_FileSystem::FileType_t read_type;
+    int status = get_file_by_name(filename, file);
 
-    for(uint16_t type_index = 0; type_index < max_types; type_index++)
+    if(status != DataManager::DATA_MANAGER_OK)
     {
-        address = TYPE_STORE_START_ADDRESS + (type_index * type_size);
-        int status = _storage.read_from_address(address, read_type.data, type_size);
+        return status;
+    }
+
+    int remaining_length = (file.parameters.file_end_address + 1) 
+                          - file.parameters.next_available_address;
+
+    int remaining_entries = remaining_length / file.parameters.length_bytes;
+
+    int total_entries = ((file.parameters.file_end_address - file.parameters.file_start_address) + 1 ) 
+                        / file.parameters.length_bytes;
+
+    written_entries = total_entries - remaining_entries;
+
+    return DataManager::DATA_MANAGER_OK;
+}
+
+/** Calculate number of measurements that can be stored
+ *
+ * @param filename ID of the file to be queried
+ * @param &remaining_entries Address of integer value to which the number
+ *                           of remaining measurements should be stored
+ * @return Indicates success or failure reason
+ */
+int DataManager::get_remaining_file_entries(uint8_t filename, int &remaining_entries)
+{
+    DataManager_FileSystem::File_t file;
+
+    int status = get_file_by_name(filename, file);
+
+    if(status != DataManager::DATA_MANAGER_OK)
+    {
+        return status;
+    }
+
+    int remaining_length = (file.parameters.file_end_address + 1) 
+                          - file.parameters.next_available_address;
+
+    remaining_entries = remaining_length / file.parameters.length_bytes;
+
+    return DataManager::DATA_MANAGER_OK;
+}
+
+/** Calculate remaining space for entries in bytes
+ *
+ * @param filename ID of the file to be queried
+ * @param &remaining_entries Address of integer value to which the amount
+ *                           of remaining space should be stored
+ * @return Indicates success or failure reason
+ */
+int DataManager::get_remaining_file_entries_bytes(uint8_t filename, int &remaining_bytes)
+{
+    DataManager_FileSystem::File_t file;
+
+    int status = get_file_by_name(filename, file);
+
+    if(status != DataManager::DATA_MANAGER_OK)
+    {
+        return status;
+    }
+
+    remaining_bytes = (file.parameters.file_end_address + 1) 
+                     - file.parameters.next_available_address;
+
+    return DataManager::DATA_MANAGER_OK;
+}
+
+/** Set global next address and space remaining counters
+ *
+ * @param data Byte array containing data to write to global stats counters
+ * @return Indicates success or failure reason
+ */
+int DataManager::set_global_stats(char *data)
+{
+    int status = _storage.write_to_address(GLOBAL_STATS_START_ADDRESS, data, GLOBAL_STATS_LENGTH);
+
+    if(status != DataManager::DATA_MANAGER_OK)
+    {
+        return status;
+    }
+
+    return DataManager::DATA_MANAGER_OK;
+}
+
+/** Perform checksum on given File_t using the 'valid' parameter
+ *
+ * @param type File to be checked for validity
+ * @return True if file is valid, else false
+ */
+bool DataManager::is_valid_file(DataManager_FileSystem::File_t file)
+{
+    /** During init_filesystem() we set every bit in the file table to 0
+     *  so, if the valid byte == 0, this can't be a valid entry
+     */
+    if(file.parameters.valid == 0x00)
+    {
+        return false;
+    }
+    
+    /** Mask the first 24 bits so that we can use our 8-bit valid flag as a rudimentary checksum 
+     *  of the length and type id
+     */
+    uint32_t checksum = (file.parameters.filename + file.parameters.length_bytes + file.parameters.file_start_address +
+                         file.parameters.file_end_address + file.parameters.next_available_address) & 0x000000FF;
+
+    if(file.parameters.valid != checksum)
+    {
+        return false;
+    }
+
+    return true;
+}
+
+/** Determine the next available address to which to write file
+ *
+ * @param &next_available_address Address of integer value in which the address
+ *                                of the next available location in memory to which
+ *                                you can write a file is stored. -1 if 
+ *                                there are no available spaces
+ * @return Indicates success or failure reason
+ */
+int DataManager::get_next_available_file_table_address(int &next_available_address)
+{
+    DataManager_FileSystem::File_t file;
+    int file_size = sizeof(file);
+    
+    uint16_t max_files = get_max_files();
+
+    for(uint16_t file_index = 0; file_index < max_files; file_index++)
+    {
+        int address = FILE_TABLE_START_ADDRESS + (file_index * file_size);
+        int status = _storage.read_from_address(address, file.data, file_size);
 
         if(status != DataManager::DATA_MANAGER_OK)
         {
             return status;
         }
 
-        if(!is_valid_file_type(read_type))
+        if(!is_valid_file(file))
+        {
+            next_available_address = address;
+            break;
+        }
+    }
+
+    return DataManager::DATA_MANAGER_OK;
+}
+
+/** Modify a file's metadata
+ *
+ * @param filename ID of file to be modified
+ * @param file Updated version of file
+ * @return Indicates success or failure reason
+ */
+int DataManager::modify_file(uint8_t filename, DataManager_FileSystem::File_t file)
+{
+    uint16_t max_files = get_max_files();
+    int file_size = sizeof(file);
+    
+    bool match = false;
+    uint16_t address;
+
+    DataManager_FileSystem::File_t read_file;
+
+    for(uint16_t file_index = 0; file_index < max_files; file_index++)
+    {
+        address = FILE_TABLE_START_ADDRESS + (file_index * file_size);
+        int status = _storage.read_from_address(address, read_file.data, file_size);
+
+        if(status != DataManager::DATA_MANAGER_OK)
+        {
+            return status;
+        }
+
+        if(!is_valid_file(read_file))
         {
             continue;
         }
 
-        if(type_id == read_type.parameters.type_id)
+        if(filename == read_file.parameters.filename)
         {
             match = true;
             break;
@@ -659,10 +696,10 @@ int DataManager::modify_file_type(uint8_t type_id, DataManager_FileSystem::FileT
 
     if(!match)
     {
-        return DataManager::DATA_MANAGER_INVALID_TYPE;
+        return DataManager_FileSystem::FILE_INVALID_NAME;
     }
 
-    int status = _storage.write_to_address(address, type.data, type_size);
+    int status = _storage.write_to_address(address, file.data, file_size);
 
     if(status != DataManager::DATA_MANAGER_OK)
     {
