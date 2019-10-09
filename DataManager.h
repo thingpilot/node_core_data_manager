@@ -62,19 +62,6 @@ namespace DataManager_FileSystem
 
         char data[sizeof(FileType_t::parameters)];
     };
-
-	union FileRecord_t
-	{
-		struct
-		{
-			uint16_t start_address;
-			uint16_t length_bytes;
-			uint8_t type_id;
-			uint8_t valid;
-		} parameters;
-		
-		char data[sizeof(FileRecord_t::parameters)];
-	};
 }
 #endif /* #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0) */
 
@@ -111,13 +98,6 @@ class DataManager
          */
 		uint16_t get_max_types();
 
-        /** Return maximum number of file records that can be stored
-         *  in persistent storage
-         *
-         *  @return Maximum number of file records that can be stored
-         */
-		int get_max_records();
-
         /** Return overall total file storage size in bytes
          *
          *  @return Total usable space, in bytes, for file storage
@@ -149,14 +129,6 @@ class DataManager
          */
         int add_file_type(DataManager_FileSystem::FileType_t type, uint16_t quantity_to_store);
 
-        /** Add new file record entry to the file record table
-         *
-         * @param record FileRecord_t object representing file record to be
-         *               stored into persistent storage medium
-         * @return Indicates success or failure reason
-         */
-        int add_file_record(DataManager_FileSystem::FileRecord_t record);
-
         /** Calculate the number of valid file type definitions currently 
          *  stored in memory
          * @param &valid_entries Address of integer value in which number of 
@@ -164,14 +136,6 @@ class DataManager
          * @return Indicates success or failure reason                        
          */
         int total_stored_file_type_entries(int &valid_entries);
-
-        /** Calculate the number of valid file type records currently 
-         *  stored in memory
-         * @param &valid_entries Address of integer value in which number of 
-         *                       detected valid entries will be stored
-         * @return Indicates success or failure reason                        
-         */
-        int total_stored_file_record_entries(int &valid_entries);
 
         /** Calculate total number of spaces available in the file type definition table
          *  for new entries
@@ -183,16 +147,6 @@ class DataManager
          */
         int total_remaining_file_type_entries(int &remaining_entries);
 
-        /** Calculate total number of spaces available in the file record table
-         *  for new entries
-         *
-         * @param &remaining_entries Address of integer value in which the total number
-         *                           of spaces available in the file record table is to be
-         *                           written
-         * @return Indicates success or failure reason
-         */
-        int total_remaining_file_record_entries(int &remaining_entries);
-
         /** Determine the next available address to which to write file type definition
          *
          * @param &next_available_address Address of integer value in which the address
@@ -202,16 +156,6 @@ class DataManager
          * @return Indicates success or failure reason
          */
         int get_next_available_file_type_table_address(int &next_available_address);
-
-        /** Determine the next available address to which to write file records
-         *
-         * @param &next_available_address Address of integer value in which the address
-         *                                of the next available location in memory to which
-         *                                you can write a file record entry is stored. -1 if 
-         *                                there are no available spaces
-         * @return Indicates success or failure reason
-         */        
-        int get_next_available_file_record_table_address(int &next_available_address);
 
         /** Get global next address and space remaining counters
          *
@@ -296,13 +240,6 @@ class DataManager
          * @return True if file type entry is valid, else false
          */
         bool is_valid_file_type(DataManager_FileSystem::FileType_t type);
-
-        /** Perform checksum on given FileRecord_t using the 'valid' parameter
-         *
-         * @param record File record to be checked for validity
-         * @return True if file record entry is valid, else false
-         */
-        bool is_valid_file_record(DataManager_FileSystem::FileRecord_t record);
 
         /** Set global next address and space remaining counters
          *
