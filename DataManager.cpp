@@ -605,6 +605,54 @@ int DataManager::get_remaining_file_size(uint8_t type_id, int &remaining_bytes)
     return DataManager::DATA_MANAGER_OK;
 }
 
+/** Read actual data, i.e. a measurement, from a specific index within a file
+ *
+ * @param type_id ID of the file from which we should read
+ * @param entry_index 0-indexed position of the entry to be read
+ * @param *data Pointer to an array in which the read data will be stored
+ * @param data_length Length of *data in bytes
+ * @return Indicates success or failure reason
+ */
+int DataManager::read_file_entry(uint8_t type_id, int entry_index, char *data, int data_length)
+{
+    DataManager_FileSystem::FileType_t type;
+
+    int status = get_file_type_by_id(type_id, type);
+
+    if(status != DataManager::DATA_MANAGER_OK)
+    {
+        return status;
+    }
+
+    int total_written_entries = 0;
+    status = get_total_written_file_entries(type_id, total_written_entries);
+
+    if(status != DataManager::DATA_MANAGER_OK)
+    {
+        return status;
+    }
+
+    if(entry_index + 1 > total_written_entries)
+    {
+        return DataManager::FILE_ENTRY_INVALID;
+    }
+
+    if(data_length != type.parameters.length_bytes)
+    {
+        return DataManager::FILE_TYPE_LENGTH_MISMATCH;
+    }
+
+    uint16_t address = type.parameters.file_start_address + (entry_index * data_length);
+    status = _storage.read_from_address(address, data, data_length);
+
+    if(status != DataManager::DATA_MANAGER_OK)
+    {
+        return status;
+    }
+
+    return DataManager::DATA_MANAGER_OK;
+}
+
 /** Write actual data, i.e. a measurement, to next available address
  *  within the files allocated memory region
  *

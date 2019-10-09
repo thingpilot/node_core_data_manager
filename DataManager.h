@@ -94,7 +94,8 @@ class DataManager
             DATA_MANAGER_INVALID_TYPE        = 22,
             FILE_TYPE_INSUFFICIENT_SPACE     = 23,
             FILE_TYPE_LENGTH_MISMATCH        = 24,
-            FILE_CONTENTS_INSUFFICIENT_SPACE = 25
+            FILE_CONTENTS_INSUFFICIENT_SPACE = 25,
+            FILE_ENTRY_INVALID               = 26
         };
 
         #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0)
@@ -218,6 +219,16 @@ class DataManager
          * @return Indicates success or failure reason
          */
         int get_global_stats(char *data);
+
+        /** Read actual data, i.e. a measurement, from a specific index within a file
+         *
+         * @param type_id ID of the file from which we should read
+         * @param entry_index 0-indexed position of the entry to be read
+         * @param *data Pointer to an array in which the read data will be stored
+         * @param data_length Length of *data in bytes
+         * @return Indicates success or failure reason
+         */
+        int read_file_entry(uint8_t type_id, int entry_index, char *data, int data_length);
 
         /** Write actual data, i.e. a measurement, to next available address
          *  within the files allocated memory region
