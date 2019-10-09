@@ -238,9 +238,26 @@ class DataManager
          */  
         int delete_file_contents(uint8_t type_id);
 
-        int overwrite_file(uint8_t type_id, char *data);
+        /** Write actual data, i.e. a measurement, to the first address
+         *  within the files allocated memory region
+         *
+         * @param type_id ID of the file to which we should append data
+         * @param *data Actual data to be written to file
+         * @param data_length Length of *data in bytes
+         * @return Indicates success or failure reason
+         */
+        int overwrite_file(uint8_t type_id, char *data, int data_length);
 
         int truncate_file(uint8_t type_id, int entries_to_truncate);
+
+        /** Calculate number of entries within a file
+         *
+         * @param type_id ID of the file to be queried
+         * @param &written_entries Address of integer value to which the number
+         *                         of written entries should be stored
+         * @return Indicates success or failure reason
+         */
+        int get_total_written_file_entries(uint8_t type_id, int &written_entries);
 
         /** Calculate number of measurements that can be stored
          *

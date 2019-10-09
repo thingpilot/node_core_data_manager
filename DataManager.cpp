@@ -524,6 +524,37 @@ int DataManager::get_next_available_file_record_table_address(int &next_availabl
     return DataManager::DATA_MANAGER_OK;
 }
 
+/** Calculate number of entries within a file
+ *
+ * @param type_id ID of the file to be queried
+ * @param &written_entries Address of integer value to which the number
+ *                         of written entries should be stored
+ * @return Indicates success or failure reason
+ */
+int DataManager::get_total_written_file_entries(uint8_t type_id, int &written_entries)
+{
+    DataManager_FileSystem::FileType_t type;
+
+    int status = get_file_type_by_id(type_id, type);
+
+    if(status != DataManager::DATA_MANAGER_OK)
+    {
+        return status;
+    }
+
+    int remaining_length = (type.parameters.file_end_address + 1) 
+                          - type.parameters.next_available_address;
+
+    int remaining_entries = remaining_length / type.parameters.length_bytes;
+
+    int total_entries = ((type.parameters.file_end_address - type.parameters.file_start_address) + 1 ) 
+                        / type.parameters.length_bytes;
+
+    written_entries = total_entries - remaining_entries;
+
+    return DataManager::DATA_MANAGER_OK;
+}
+
 /** Calculate number of measurements that can be stored
  *
  * @param type_id ID of the file to be queried
@@ -668,10 +699,59 @@ int DataManager::delete_file_contents(uint8_t type_id)
     return DataManager::DATA_MANAGER_OK;
 }
 
-int DataManager::overwrite_file(uint8_t type_id, char *data)
+/** Write actual data, i.e. a measurement, to the first address
+ *  within the files allocated memory region
+ *
+ * @param type_id ID of the file to which we should append data
+ * @param *data Actual data to be written to file
+ * @param data_length Length of *data in bytes
+ * @return Indicates success or failure reason
+ */
+int DataManager::overwrite_file(uint8_t type_id, char *data, int data_length)
 {
-    return 0;
+    DataManager_FileSystem::FileType_t type;
+
+    int status = get_file_type_by_id(type_id, type);
+
+    if(status != DataManager::DATA_MANAGER_OK)
+    {
+        return status;
+    }
+
+    if(data_length != type.parameters.length_bytes)
+    {
+        return DataManager::FILE_TYPE_LENGTH_MISMATCH;
+    }
+
+    /** Write actual data, i.e. a measurement, to the start address 
+     */
+    status = _storage.write_to_address(type.parameters.file_start_address, 
+                                       data, data_length);
+
+    if(status != DataManager::DATA_MANAGER_OK)
+    {
+        return status;
+    }
+
+    type.parameters.next_available_address = type.parameters.file_start_address + data_length;
+    type.parameters.valid = type.parameters.type_id + 
+                            type.parameters.length_bytes + 
+                            type.parameters.file_start_address +
+                            type.parameters.file_end_address + 
+                            type.parameters.next_available_address;
+    
+    /** Update the next available address and validity byte
+     */
+    status = modify_file_type(type_id, type);
+
+    if(status != DataManager::DATA_MANAGER_OK)
+    {
+        return status;
+    }
+
+    return DataManager::DATA_MANAGER_OK;
 }
+
 
 int DataManager::truncate_file(uint8_t type_id, int entries_to_truncate)
 {
