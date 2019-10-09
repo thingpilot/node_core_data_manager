@@ -10,6 +10,11 @@
  */
 #pragma once
 
+/** Used to include/exclude specific utility functions and parameters;
+ *  set to true to include or false to exclude
+ */
+#define DM_DBG true
+
 /** Includes 
  */
 #include <mbed.h>
@@ -190,6 +195,22 @@ class DataManager
          * @return Indicates success or failure reason
          */
         int get_remaining_file_entries_bytes(uint8_t filename, int &remaining_bytes);
+
+        #if defined (DM_DBG) && (DM_DBG == true)
+        /** Utility function to print a File_t over UART
+         *
+         * &pc Serial object over which to print the File_t object parameters
+         * file The File_t object whose parameters we wish to print
+         */
+        void print_file(Serial &pc, DataManager_FileSystem::File_t file);
+
+        /** Utility function to print GlobalStats_t over UART
+         *
+         * &pc Serial object over which to print the GlobalStats_t object parameters
+         * g_stats The GlobalStats_t object whose parameters we wish to print
+         */
+        void print_global_stats(Serial &pc, DataManager_FileSystem::GlobalStats_t g_stats);
+        #endif // #if defined (DM_DBG) && (DM_DBG == true)
 
     private:
 
