@@ -88,11 +88,13 @@ class DataManager
 
         enum
         {
-            DATA_MANAGER_OK              = 0,
-            FILE_TYPE_TABLE_FULL         = 20,
-            FILE_RECORD_TABLE_FULL       = 21,
-            DATA_MANAGER_INVALID_TYPE    = 22,
-            FILE_TYPE_INSUFFICIENT_SPACE = 23
+            DATA_MANAGER_OK                  = 0,
+            FILE_TYPE_TABLE_FULL             = 20,
+            FILE_RECORD_TABLE_FULL           = 21,
+            DATA_MANAGER_INVALID_TYPE        = 22,
+            FILE_TYPE_INSUFFICIENT_SPACE     = 23,
+            FILE_TYPE_LENGTH_MISMATCH        = 24,
+            FILE_CONTENTS_INSUFFICIENT_SPACE = 25
         };
 
         #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0)
@@ -145,8 +147,6 @@ class DataManager
          * @return Indicates success or failure reason
          */
         int add_file_type(DataManager_FileSystem::FileType_t type, uint16_t quantity_to_store);
-
-        int update_file_type(uint8_t type_id, DataManager_FileSystem::FileType_t type);
 
         /** Add new file record entry to the file record table
          *
@@ -219,13 +219,46 @@ class DataManager
          */
         int get_global_stats(char *data);
 
-        int append_to_file(uint8_t type_id, char *data);
+        /** Write actual data, i.e. a measurement, to next available address
+         *  within the files allocated memory region
+         *
+         * @param type_id ID of the file to which we should append data
+         * @param *data Actual data to be written to file
+         * @param data_length Length of *data in bytes
+         * @return Indicates success or failure reason
+         */
+        int append_to_file(uint8_t type_id, char *data, int data_length);
 
+        /** By resetting the next available address to the file start address
+         *  we essentially 'delete' all contents of the file while retaining the
+         *  actual data until it is overwritten
+         *
+         * @param type_id ID of the file type definition whose contents are to be cleared
+         * @return Indicates success or failure reason
+         */  
         int delete_file_contents(uint8_t type_id);
 
         int overwrite_file(uint8_t type_id, char *data);
 
         int truncate_file(uint8_t type_id, int entries_to_truncate);
+
+        /** Calculate number of measurements that can be stored
+         *
+         * @param type_id ID of the file to be queried
+         * @param &remaining_entries Address of integer value to which the number
+         *                           of remaining measurements should be stored
+         * @return Indicates success or failure reason
+         */
+        int get_remaining_file_entries(uint8_t type_id, int &remaining_entries);
+
+        /** Calculate remaining space for measurement in bytes
+         *
+         * @param type_id ID of the file to be queried
+         * @param &remaining_entries Address of integer value to which the amount
+         *                           of remaining space should be stored
+         * @return Indicates success or failure reason
+         */
+        int get_remaining_file_size(uint8_t type_id, int &remaining_bytes);
 
     private:
 
@@ -248,7 +281,15 @@ class DataManager
          * @param data Byte array containing data to write to global stats counters
          * @return Indicates success or failure reason
          */
-        int set_global_stats(char *data);     
+        int set_global_stats(char *data);   
+
+        /** Modify file type definition
+         *
+         * @param type_id ID of file type definition to be modified
+         * @param type Updated version of file type definition
+         * @return Indicates success or failure reason
+         */
+        int modify_file_type(uint8_t type_id, DataManager_FileSystem::FileType_t type);  
 
         #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0)
         STM24256 _storage;

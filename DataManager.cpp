@@ -524,11 +524,122 @@ int DataManager::get_next_available_file_record_table_address(int &next_availabl
     return DataManager::DATA_MANAGER_OK;
 }
 
-int DataManager::append_to_file(uint8_t type_id, char *data)
+/** Calculate number of measurements that can be stored
+ *
+ * @param type_id ID of the file to be queried
+ * @param &remaining_entries Address of integer value to which the number
+ *                           of remaining measurements should be stored
+ * @return Indicates success or failure reason
+ */
+int DataManager::get_remaining_file_entries(uint8_t type_id, int &remaining_entries)
 {
-    return 0;
+    DataManager_FileSystem::FileType_t type;
+
+    int status = get_file_type_by_id(type_id, type);
+
+    if(status != DataManager::DATA_MANAGER_OK)
+    {
+        return status;
+    }
+
+    int remaining_length = (type.parameters.file_end_address + 1) 
+                          - type.parameters.next_available_address;
+
+    remaining_entries = remaining_length / type.parameters.length_bytes;
+
+    return DataManager::DATA_MANAGER_OK;
 }
 
+/** Calculate remaining space for measurement in bytes
+ *
+ * @param type_id ID of the file to be queried
+ * @param &remaining_entries Address of integer value to which the amount
+ *                           of remaining space should be stored
+ * @return Indicates success or failure reason
+ */
+int DataManager::get_remaining_file_size(uint8_t type_id, int &remaining_bytes)
+{
+    DataManager_FileSystem::FileType_t type;
+
+    int status = get_file_type_by_id(type_id, type);
+
+    if(status != DataManager::DATA_MANAGER_OK)
+    {
+        return status;
+    }
+
+    remaining_bytes = (type.parameters.file_end_address + 1) 
+                     - type.parameters.next_available_address;
+
+    return DataManager::DATA_MANAGER_OK;
+}
+
+/** Write actual data, i.e. a measurement, to next available address
+ *  within the files allocated memory region
+ *
+ * @param type_id ID of the file to which we should append data
+ * @param *data Actual data to be written to file
+ * @param data_length Length of *data in bytes
+ * @return Indicates success or failure reason
+ */
+int DataManager::append_to_file(uint8_t type_id, char *data, int data_length)
+{
+    DataManager_FileSystem::FileType_t type;
+
+    int status = get_file_type_by_id(type_id, type);
+
+    if(status != DataManager::DATA_MANAGER_OK)
+    {
+        return status;
+    }
+
+    if(data_length != type.parameters.length_bytes)
+    {
+        return DataManager::FILE_TYPE_LENGTH_MISMATCH;
+    }
+
+    if((data_length - 1) + type.parameters.next_available_address 
+       > type.parameters.file_end_address)
+    {
+        return DataManager::FILE_CONTENTS_INSUFFICIENT_SPACE;
+    }
+
+    /** Write actual data, i.e. a measurement, to the next available address 
+     */
+    status = _storage.write_to_address(type.parameters.next_available_address, 
+                                       data, data_length);
+
+    if(status != DataManager::DATA_MANAGER_OK)
+    {
+        return status;
+    }
+
+    type.parameters.next_available_address += data_length;
+    type.parameters.valid = type.parameters.type_id + 
+                            type.parameters.length_bytes + 
+                            type.parameters.file_start_address +
+                            type.parameters.file_end_address + 
+                            type.parameters.next_available_address;
+    
+    /** Update the next available address and validity byte
+     */
+    status = modify_file_type(type_id, type);
+
+    if(status != DataManager::DATA_MANAGER_OK)
+    {
+        return status;
+    }
+
+    return DataManager::DATA_MANAGER_OK;
+}
+
+/** By resetting the next available address to the file start address
+ *  we essentially 'delete' all contents of the file while retaining the
+ *  actual data until it is overwritten
+ *
+ * @param type_id ID of the file type definition whose contents are to be cleared
+ * @return Indicates success or failure reason
+ */  
 int DataManager::delete_file_contents(uint8_t type_id)
 {
     DataManager_FileSystem::FileType_t type;
@@ -547,7 +658,7 @@ int DataManager::delete_file_contents(uint8_t type_id)
                             type.parameters.file_end_address + 
                             type.parameters.next_available_address;
 
-    status = update_file_type(type_id, type);
+    status = modify_file_type(type_id, type);
 
     if(status != DataManager::DATA_MANAGER_OK)
     {
@@ -567,7 +678,13 @@ int DataManager::truncate_file(uint8_t type_id, int entries_to_truncate)
     return 0;
 }
 
-int DataManager::update_file_type(uint8_t type_id, DataManager_FileSystem::FileType_t type)
+/** Modify file type definition
+ *
+ * @param type_id ID of file type definition to be modified
+ * @param type Updated version of file type definition
+ * @return Indicates success or failure reason
+ */
+int DataManager::modify_file_type(uint8_t type_id, DataManager_FileSystem::FileType_t type)
 {
     uint16_t max_types = get_max_types();
     int type_size = sizeof(type);
@@ -603,12 +720,6 @@ int DataManager::update_file_type(uint8_t type_id, DataManager_FileSystem::FileT
     {
         return DataManager::DATA_MANAGER_INVALID_TYPE;
     }
-
-    type.parameters.valid = type.parameters.type_id + 
-                            type.parameters.length_bytes + 
-                            type.parameters.file_start_address +
-                            type.parameters.file_end_address + 
-                            type.parameters.next_available_address;
 
     int status = _storage.write_to_address(address, type.data, type_size);
 
