@@ -1,6 +1,6 @@
 /**
   * @file    DataManager.cpp
-  * @version 0.1.0
+  * @version 0.2.0
   * @author  Rafaella Neofytou, Adam Mitchell
   * @brief   C++ file of the DataManager. Provides a very lightweight filesystem to facilitate the
   *          storage of arbitrary file types
@@ -169,8 +169,8 @@ int DataManager::add_file(DataManager_FileSystem::File_t file, uint16_t entries_
         return g_stats_status;
     }
 
-    file.parameters.valid = file.parameters.filename + file.parameters.length_bytes + file.parameters.file_start_address +
-                            file.parameters.file_end_address + file.parameters.next_available_address;
+    file.parameters.valid = (file.parameters.filename + file.parameters.length_bytes + file.parameters.file_start_address +
+                            file.parameters.file_end_address + file.parameters.next_available_address) | 1;
 
     int address = -1;
     int next_address_status = get_next_available_file_table_address(address);
@@ -383,11 +383,8 @@ int DataManager::append_file_entry(uint8_t filename, char *data, int data_length
     }
 
     file.parameters.next_available_address += data_length;
-    file.parameters.valid = file.parameters.filename + 
-                            file.parameters.length_bytes + 
-                            file.parameters.file_start_address +
-                            file.parameters.file_end_address + 
-                            file.parameters.next_available_address;
+    file.parameters.valid = (file.parameters.filename + file.parameters.length_bytes + file.parameters.file_start_address +
+                            file.parameters.file_end_address + file.parameters.next_available_address) | 1;
     
     /** Update the next available address and validity byte
      */
@@ -420,11 +417,8 @@ int DataManager::delete_file_entries(uint8_t filename)
     }
 
     file.parameters.next_available_address = file.parameters.file_start_address;
-    file.parameters.valid = file.parameters.filename + 
-                            file.parameters.length_bytes + 
-                            file.parameters.file_start_address +
-                            file.parameters.file_end_address + 
-                            file.parameters.next_available_address;
+    file.parameters.valid = (file.parameters.filename + file.parameters.length_bytes + file.parameters.file_start_address +
+                            file.parameters.file_end_address + file.parameters.next_available_address) | 1;
 
     status = modify_file(filename, file);
 
@@ -471,11 +465,8 @@ int DataManager::overwrite_file_entries(uint8_t filename, char *data, int data_l
     }
 
     file.parameters.next_available_address = file.parameters.file_start_address + data_length;
-    file.parameters.valid = file.parameters.filename + 
-                            file.parameters.length_bytes + 
-                            file.parameters.file_start_address +
-                            file.parameters.file_end_address + 
-                            file.parameters.next_available_address;
+    file.parameters.valid = (file.parameters.filename + file.parameters.length_bytes + file.parameters.file_start_address +
+                            file.parameters.file_end_address + file.parameters.next_available_address) | 1;
     
     /** Update the next available address and validity byte
      */
@@ -489,9 +480,86 @@ int DataManager::overwrite_file_entries(uint8_t filename, char *data, int data_l
     return DataManager::DATA_MANAGER_OK;
 }
 
-int DataManager::truncate_file(uint8_t filename, int entries_to_truncate)
+/** Remove entries_to_remove entries starting from index 0, shift
+ *  the remaining entries to the start of the file entry table and 
+ *  set the next available address to the lowest available address. 
+ *  This frees up space at the end of the file entry table by removing
+ *  the most historic data
+ *
+ * @param filename ID of the file on which this operation is to be performed
+ * @param entries_to_remove Number of entries to be truncated from the 
+ *                          start of the file entry table
+ * @return Indicates success or failure reason
+ */
+int DataManager::truncate_file(uint8_t filename, int entries_to_remove)
 {
-    return 0;
+    DataManager_FileSystem::File_t file;
+
+    int status = get_file_by_name(filename, file);
+
+    if(status != DataManager::DATA_MANAGER_OK)
+    {
+        return status;
+    }
+
+    int written_entries = 0;
+    status = get_total_written_file_entries(filename, written_entries);
+
+    if(status != DataManager::DATA_MANAGER_OK)
+    {
+        return status;
+    }
+
+    if(entries_to_remove >= written_entries)
+    {
+        status = delete_file_entries(filename);
+
+        if(status != DataManager::DATA_MANAGER_OK)
+        {
+            return status;
+        }
+
+        return DataManager::DATA_MANAGER_OK;
+    }
+
+    char buffer[file.parameters.length_bytes];
+    int new_index = 0;
+
+    for(int current_index = entries_to_remove; current_index < written_entries; current_index++)
+    {
+        status = read_file_entry(filename, current_index, buffer, file.parameters.length_bytes);
+
+        if(status != DataManager::DATA_MANAGER_OK)
+        {
+            return status;
+        }
+
+        uint16_t new_address = file.parameters.file_start_address + (new_index * file.parameters.length_bytes);
+
+        status = _storage.write_to_address(new_address, buffer, file.parameters.length_bytes);
+
+        if(status != DataManager::DATA_MANAGER_OK)
+        {
+            return status;
+        }
+
+        new_index++;
+    }
+
+    file.parameters.next_available_address = file.parameters.file_start_address + (new_index * file.parameters.length_bytes); 
+    file.parameters.valid = (file.parameters.filename + file.parameters.length_bytes + file.parameters.file_start_address +
+                            file.parameters.file_end_address + file.parameters.next_available_address) | 1;
+    
+    /** Update the next available address and validity byte
+     */
+    status = modify_file(filename, file);
+
+    if(status != DataManager::DATA_MANAGER_OK)
+    {
+        return status;
+    }
+
+    return DataManager::DATA_MANAGER_OK;
 }
 
 /** Calculate number of entries within a file
@@ -608,10 +676,10 @@ bool DataManager::is_valid_file(DataManager_FileSystem::File_t file)
     }
     
     /** Mask the first 24 bits so that we can use our 8-bit valid flag as a rudimentary checksum 
-     *  of the length and type id
+     *  of the length and type id. The checksum is OR'd with 1 so that our value can never = 0
      */
-    uint32_t checksum = (file.parameters.filename + file.parameters.length_bytes + file.parameters.file_start_address +
-                         file.parameters.file_end_address + file.parameters.next_available_address) & 0x000000FF;
+    uint32_t checksum = ((file.parameters.filename + file.parameters.length_bytes + file.parameters.file_start_address +
+                         file.parameters.file_end_address + file.parameters.next_available_address) | 1) & 0x000000FF;
 
     if(file.parameters.valid != checksum)
     {

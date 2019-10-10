@@ -1,6 +1,6 @@
 /**
   * @file    DataManager.h
-  * @version 0.1.0
+  * @version 0.2.0
   * @author  Rafaella Neofytou, Adam Mitchell
   * @brief   Header file of the DataManager. Provides a very lightweight filesystem to facilitate the
   *          storage of arbitrary file types
@@ -47,7 +47,7 @@ class DataManager
 
         enum
         {
-            DATA_MANAGER_OK                  = 0
+            DATA_MANAGER_OK = 0
         };
 
         #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0)
@@ -167,7 +167,18 @@ class DataManager
          */
         int overwrite_file_entries(uint8_t filename, char *data, int data_length);
 
-        int truncate_file(uint8_t filename, int entries_to_truncate);
+        /** Remove entries_to_remove entries starting from index 0, shift
+         *  the remaining entries to the start of the file entry table and 
+         *  set the next available address to the lowest available address. 
+         *  This frees up space at the end of the file entry table by removing
+         *  the most historic data
+         *
+         * @param filename ID of the file on which this operation is to be performed
+         * @param entries_to_remove Number of entries to be truncated from the 
+         *                          start of the file entry table
+         * @return Indicates success or failure reason
+         */
+        int truncate_file(uint8_t filename, int entries_to_remove);
 
         /** Calculate number of entries within a file
          *
