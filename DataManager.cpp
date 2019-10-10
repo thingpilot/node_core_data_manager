@@ -169,8 +169,8 @@ int DataManager::add_file(DataManager_FileSystem::File_t file, uint16_t entries_
         return g_stats_status;
     }
 
-    file.parameters.valid = file.parameters.filename + file.parameters.length_bytes + file.parameters.file_start_address +
-                            file.parameters.file_end_address + file.parameters.next_available_address;
+    file.parameters.valid = (file.parameters.filename + file.parameters.length_bytes + file.parameters.file_start_address +
+                            file.parameters.file_end_address + file.parameters.next_available_address) | 1;
 
     int address = -1;
     int next_address_status = get_next_available_file_table_address(address);
@@ -383,11 +383,8 @@ int DataManager::append_file_entry(uint8_t filename, char *data, int data_length
     }
 
     file.parameters.next_available_address += data_length;
-    file.parameters.valid = file.parameters.filename + 
-                            file.parameters.length_bytes + 
-                            file.parameters.file_start_address +
-                            file.parameters.file_end_address + 
-                            file.parameters.next_available_address;
+    file.parameters.valid = (file.parameters.filename + file.parameters.length_bytes + file.parameters.file_start_address +
+                            file.parameters.file_end_address + file.parameters.next_available_address) | 1;
     
     /** Update the next available address and validity byte
      */
@@ -420,11 +417,8 @@ int DataManager::delete_file_entries(uint8_t filename)
     }
 
     file.parameters.next_available_address = file.parameters.file_start_address;
-    file.parameters.valid = file.parameters.filename + 
-                            file.parameters.length_bytes + 
-                            file.parameters.file_start_address +
-                            file.parameters.file_end_address + 
-                            file.parameters.next_available_address;
+    file.parameters.valid = (file.parameters.filename + file.parameters.length_bytes + file.parameters.file_start_address +
+                            file.parameters.file_end_address + file.parameters.next_available_address) | 1;
 
     status = modify_file(filename, file);
 
@@ -471,11 +465,8 @@ int DataManager::overwrite_file_entries(uint8_t filename, char *data, int data_l
     }
 
     file.parameters.next_available_address = file.parameters.file_start_address + data_length;
-    file.parameters.valid = file.parameters.filename + 
-                            file.parameters.length_bytes + 
-                            file.parameters.file_start_address +
-                            file.parameters.file_end_address + 
-                            file.parameters.next_available_address;
+    file.parameters.valid = (file.parameters.filename + file.parameters.length_bytes + file.parameters.file_start_address +
+                            file.parameters.file_end_address + file.parameters.next_available_address) | 1;
     
     /** Update the next available address and validity byte
      */
@@ -556,11 +547,8 @@ int DataManager::truncate_file(uint8_t filename, int entries_to_remove)
     }
 
     file.parameters.next_available_address = file.parameters.file_start_address + (new_index * file.parameters.length_bytes); 
-    file.parameters.valid = file.parameters.filename + 
-                            file.parameters.length_bytes + 
-                            file.parameters.file_start_address +
-                            file.parameters.file_end_address + 
-                            file.parameters.next_available_address;
+    file.parameters.valid = (file.parameters.filename + file.parameters.length_bytes + file.parameters.file_start_address +
+                            file.parameters.file_end_address + file.parameters.next_available_address) | 1;
     
     /** Update the next available address and validity byte
      */
@@ -688,10 +676,10 @@ bool DataManager::is_valid_file(DataManager_FileSystem::File_t file)
     }
     
     /** Mask the first 24 bits so that we can use our 8-bit valid flag as a rudimentary checksum 
-     *  of the length and type id
+     *  of the length and type id. The checksum is OR'd with 1 so that our value can never = 0
      */
-    uint32_t checksum = (file.parameters.filename + file.parameters.length_bytes + file.parameters.file_start_address +
-                         file.parameters.file_end_address + file.parameters.next_available_address) & 0x000000FF;
+    uint32_t checksum = ((file.parameters.filename + file.parameters.length_bytes + file.parameters.file_start_address +
+                         file.parameters.file_end_address + file.parameters.next_available_address) | 1) & 0x000000FF;
 
     if(file.parameters.valid != checksum)
     {
