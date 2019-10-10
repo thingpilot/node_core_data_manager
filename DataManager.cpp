@@ -489,9 +489,89 @@ int DataManager::overwrite_file_entries(uint8_t filename, char *data, int data_l
     return DataManager::DATA_MANAGER_OK;
 }
 
-int DataManager::truncate_file(uint8_t filename, int entries_to_truncate)
+/** Remove entries_to_remove entries starting from index 0, shift
+ *  the remaining entries to the start of the file entry table and 
+ *  set the next available address to the lowest available address. 
+ *  This frees up space at the end of the file entry table by removing
+ *  the most historic data
+ *
+ * @param filename ID of the file on which this operation is to be performed
+ * @param entries_to_remove Number of entries to be truncated from the 
+ *                          start of the file entry table
+ * @return Indicates success or failure reason
+ */
+int DataManager::truncate_file(uint8_t filename, int entries_to_remove)
 {
-    return 0;
+    DataManager_FileSystem::File_t file;
+
+    int status = get_file_by_name(filename, file);
+
+    if(status != DataManager::DATA_MANAGER_OK)
+    {
+        return status;
+    }
+
+    int written_entries = 0;
+    status = get_total_written_file_entries(filename, written_entries);
+
+    if(status != DataManager::DATA_MANAGER_OK)
+    {
+        return status;
+    }
+
+    if(entries_to_remove >= written_entries)
+    {
+        status = delete_file_entries(filename);
+
+        if(status != DataManager::DATA_MANAGER_OK)
+        {
+            return status;
+        }
+
+        return DataManager::DATA_MANAGER_OK;
+    }
+
+    char buffer[file.parameters.length_bytes];
+    int new_index = 0;
+
+    for(int current_index = entries_to_remove; current_index < written_entries; current_index++)
+    {
+        status = read_file_entry(filename, current_index, buffer, file.parameters.length_bytes);
+
+        if(status != DataManager::DATA_MANAGER_OK)
+        {
+            return status;
+        }
+
+        uint16_t new_address = file.parameters.file_start_address + (new_index * file.parameters.length_bytes);
+
+        status = _storage.write_to_address(new_address, buffer, file.parameters.length_bytes);
+
+        if(status != DataManager::DATA_MANAGER_OK)
+        {
+            return status;
+        }
+
+        new_index++;
+    }
+
+    file.parameters.next_available_address = file.parameters.file_start_address + (new_index * file.parameters.length_bytes); 
+    file.parameters.valid = file.parameters.filename + 
+                            file.parameters.length_bytes + 
+                            file.parameters.file_start_address +
+                            file.parameters.file_end_address + 
+                            file.parameters.next_available_address;
+    
+    /** Update the next available address and validity byte
+     */
+    status = modify_file(filename, file);
+
+    if(status != DataManager::DATA_MANAGER_OK)
+    {
+        return status;
+    }
+
+    return DataManager::DATA_MANAGER_OK;
 }
 
 /** Calculate number of entries within a file
