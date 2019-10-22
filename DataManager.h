@@ -1,6 +1,6 @@
 /**
   * @file    DataManager.h
-  * @version 0.2.0
+  * @version 0.2.1
   * @author  Rafaella Neofytou, Adam Mitchell
   * @brief   Header file of the DataManager. Provides a very lightweight filesystem to facilitate the
   *          storage of arbitrary file types
