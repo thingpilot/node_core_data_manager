@@ -1,6 +1,6 @@
 /**
   * @file    DataManager.h
-  * @version 0.2.0
+  * @version 0.2.1
   * @author  Rafaella Neofytou, Adam Mitchell
   * @brief   Header file of the DataManager. Provides a very lightweight filesystem to facilitate the
   *          storage of arbitrary file types
@@ -30,7 +30,7 @@
 #define EEPROM_SIZE_BYTES          32000
 #define GLOBAL_STATS_START_ADDRESS 0
 #define GLOBAL_STATS_LENGTH        8
-#define FILE_TABLE_PAGES           2
+#define FILE_TABLE_PAGES           3
 #define FILE_TABLE_START_ADDRESS   GLOBAL_STATS_LENGTH
 #define FILE_TABLE_LENGTH          ((PAGE_SIZE_BYTES * FILE_TABLE_PAGES) - GLOBAL_STATS_LENGTH)
 #define STORAGE_START_ADDRESS      FILE_TABLE_LENGTH + GLOBAL_STATS_LENGTH
