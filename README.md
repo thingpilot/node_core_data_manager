@@ -1,7 +1,11 @@
 ## Node Core Data Manager Release Notes
+**v0.3.0** *15/11/2019*
+
+- No longer require board.h due to definition of custom targets
+
 **v0.2.1** *22/10/2019*
 
--Changed the max table files to 3
+- Changed the max table files to 3
 
 **v0.2.0** *10/10/2019*
 

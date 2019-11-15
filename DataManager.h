@@ -1,6 +1,6 @@
 /**
   * @file    DataManager.h
-  * @version 0.2.1
+  * @version 0.3.0
   * @author  Rafaella Neofytou, Adam Mitchell
   * @brief   Header file of the DataManager. Provides a very lightweight filesystem to facilitate the
   *          storage of arbitrary file types
@@ -18,7 +18,6 @@
 /** Includes 
  */
 #include <mbed.h>
-#include "board.h"
 #include "DataManager_FileSystem.h"
 
 #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0)
