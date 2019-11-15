@@ -1,4 +1,9 @@
 ## Node Core Data Manager Release Notes
+**v0.3.1** *15/11/2019*
+
+- Add support for Thingpilot Wright v1.0.0 
+- Add support for Thingpilot Earhart v1.0.0
+
 **v0.3.0** *15/11/2019*
 
 - No longer require board.h due to definition of custom targets
