@@ -18,7 +18,6 @@
 /** Includes 
  */
 #include <mbed.h>
-#include "board.h"
 #include "DataManager_FileSystem.h"
 
 #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0)
