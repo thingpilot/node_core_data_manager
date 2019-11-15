@@ -1,6 +1,6 @@
 /**
   * @file    DataManager.cpp
-  * @version 0.3.0
+  * @version 0.3.1
   * @author  Rafaella Neofytou, Adam Mitchell
   * @brief   C++ file of the DataManager. Provides a very lightweight filesystem to facilitate the
   *          storage of arbitrary file types
@@ -11,13 +11,15 @@
 #include "DataManager.h"
 
 
-#if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0)
+#if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0 ||
+                        BOARD == WRIGHT_V1_0_0 ||
+                        BOARD == EARHART_V1_0_0)
 DataManager::DataManager(PinName write_control, PinName sda, PinName scl, int frequency_hz) : 
                          _storage(write_control, sda, scl, frequency_hz)
 {
     
 }
-#endif /* #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0) */
+#endif /* #if defined (BOARD) && (BOARD ...) */
 
 DataManager::~DataManager()
 {

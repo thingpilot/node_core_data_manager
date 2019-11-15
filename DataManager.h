@@ -1,6 +1,6 @@
 /**
   * @file    DataManager.h
-  * @version 0.3.0
+  * @version 0.3.1
   * @author  Rafaella Neofytou, Adam Mitchell
   * @brief   Header file of the DataManager. Provides a very lightweight filesystem to facilitate the
   *          storage of arbitrary file types
@@ -20,7 +20,9 @@
 #include <mbed.h>
 #include "DataManager_FileSystem.h"
 
-#if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0)
+#if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0 ||
+                        BOARD == WRIGHT_V1_0_0 ||
+                        BOARD == EARHART_V1_0_0)
 
 #include "STM24256.h"
 
@@ -35,7 +37,7 @@
 #define STORAGE_START_ADDRESS      FILE_TABLE_LENGTH + GLOBAL_STATS_LENGTH
 #define STORAGE_LENGTH             ((PAGES * PAGE_SIZE_BYTES) - (STORAGE_START_ADDRESS))
 
-#endif /* #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0) */
+#endif /* #if defined (BOARD) && (...) */
 
 /** Base class for the Data Manager
  */ 
@@ -49,9 +51,11 @@ class DataManager
             DATA_MANAGER_OK = 0
         };
 
-        #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0)
+        #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0 ||
+                                BOARD == WRIGHT_V1_0_0 ||
+                                BOARD == EARHART_V1_0_0)
         DataManager(PinName write_control, PinName sda, PinName scl, int frequency_hz);
-        #endif /* #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0) */
+        #endif /* #if defined (BOARD) && (...) */
 
 		~DataManager();
 
@@ -256,8 +260,10 @@ class DataManager
          */
         int modify_file(uint8_t filename, DataManager_FileSystem::File_t file);  
 
-        #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0)
+        #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0 ||
+                                BOARD == WRIGHT_V1_0_0 ||
+                                BOARD == EARHART_V1_0_0)
         STM24256 _storage;
-        #endif /* #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0) */
+        #endif /* #if defined (BOARD) && (...) */
 
 };
