@@ -11,21 +11,19 @@
 #include "DataManager.h"
 
 
-#if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0 ||
-                        BOARD == WRIGHT_V1_0_0 ||
-                        BOARD == EARHART_V1_0_0)
+#if BOARD == DEVELOPMENT_BOARD_V1_1_0 || BOARD == WRIGHT_V1_0_0 || BOARD == EARHART_V1_0_0
 DataManager::DataManager(PinName write_control, PinName sda, PinName scl, int frequency_hz) : 
                          _storage(write_control, sda, scl, frequency_hz)
 {
     
 }
-#endif /* #if defined (BOARD) && (BOARD ...) */
+#endif /* #if BOARD == ... */
 
 DataManager::~DataManager()
 {
-    #if defined (_PERSISTENT_STORAGE_DRIVER) && (_PERSISTENT_STORAGE_DRIVER == STM24256)
+    #if _PERSISTENT_STORAGE_DRIVER == STM24256
     _storage.~STM24256();
-    #endif /* #if defined (_PERSISTENT_STORAGE_DRIVER) && (_PERSISTENT_STORAGE_DRIVER == STM24256) */
+    #endif /* #if _PERSISTENT_STORAGE_DRIVER == ... */
 }
 
 /** Initialise the file table to all zeros, set file system initialised flag 
@@ -779,7 +777,7 @@ int DataManager::modify_file(uint8_t filename, DataManager_FileSystem::File_t fi
     return DataManager::DATA_MANAGER_OK;
 }
 
-#if defined (DM_DBG) && (DM_DBG == true)
+#if DM_DBG == true
 /** Utility function to print a File_t over UART
  *
  * &pc Serial object over which to print the File_t object parameters
@@ -821,5 +819,5 @@ void DataManager::print_global_stats(Serial &pc, DataManager_FileSystem::GlobalS
     pc.printf("Next_available_address: %u\r\n", g_stats.parameters.next_available_address);
     pc.printf("---END PRINT GLOBAL STATS\r\n");
 }
-#endif // #if defined (DM_DBG) && (DM_DBG == true)
+#endif // #if DM_DBG == true
 
