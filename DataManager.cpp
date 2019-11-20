@@ -21,9 +21,9 @@ DataManager::DataManager(PinName write_control, PinName sda, PinName scl, int fr
 
 DataManager::~DataManager()
 {
-    #if _PERSISTENT_STORAGE_DRIVER == STM24256
+    #if _PERSISTENT_STORAGE_DRIVER == PS_DRIVER_STM24256xxx
     _storage.~STM24256();
-    #endif /* #if _PERSISTENT_STORAGE_DRIVER == ... */
+    #endif /* #if _PERSISTENT_STORAGE_DRIVER == PS_DRIVER_STM24256xxx */
 }
 
 /** Initialise the file table to all zeros, set file system initialised flag 
