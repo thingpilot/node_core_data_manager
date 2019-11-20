@@ -1,6 +1,6 @@
 /**
   * @file    DataManager.h
-  * @version 0.3.1
+  * @version 0.4.0
   * @author  Rafaella Neofytou, Adam Mitchell
   * @brief   Header file of the DataManager. Provides a very lightweight filesystem to facilitate the
   *          storage of arbitrary file types
@@ -20,24 +20,21 @@
 #include <mbed.h>
 #include "DataManager_FileSystem.h"
 
-#if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0 ||
-                        BOARD == WRIGHT_V1_0_0 ||
-                        BOARD == EARHART_V1_0_0)
+/** Include specific drivers dependent on target */
+#if BOARD == DEVELOPMENT_BOARD_V1_1_0 || BOARD == WRIGHT_V1_0_0 || BOARD == EARHART_V1_0_0
+    #include "STM24256.h"
 
-#include "STM24256.h"
-
-#define PAGES                      500
-#define PAGE_SIZE_BYTES            64
-#define EEPROM_SIZE_BYTES          32000
-#define GLOBAL_STATS_START_ADDRESS 0
-#define GLOBAL_STATS_LENGTH        8
-#define FILE_TABLE_PAGES           3
-#define FILE_TABLE_START_ADDRESS   GLOBAL_STATS_LENGTH
-#define FILE_TABLE_LENGTH          ((PAGE_SIZE_BYTES * FILE_TABLE_PAGES) - GLOBAL_STATS_LENGTH)
-#define STORAGE_START_ADDRESS      FILE_TABLE_LENGTH + GLOBAL_STATS_LENGTH
-#define STORAGE_LENGTH             ((PAGES * PAGE_SIZE_BYTES) - (STORAGE_START_ADDRESS))
-
-#endif /* #if defined (BOARD) && (...) */
+    #define PAGES                      500
+    #define PAGE_SIZE_BYTES            64
+    #define EEPROM_SIZE_BYTES          32000
+    #define GLOBAL_STATS_START_ADDRESS 0
+    #define GLOBAL_STATS_LENGTH        8
+    #define FILE_TABLE_PAGES           3
+    #define FILE_TABLE_START_ADDRESS   GLOBAL_STATS_LENGTH
+    #define FILE_TABLE_LENGTH          ((PAGE_SIZE_BYTES * FILE_TABLE_PAGES) - GLOBAL_STATS_LENGTH)
+    #define STORAGE_START_ADDRESS      FILE_TABLE_LENGTH + GLOBAL_STATS_LENGTH
+    #define STORAGE_LENGTH             ((PAGES * PAGE_SIZE_BYTES) - (STORAGE_START_ADDRESS))
+#endif /* #if BOARD == ... */
 
 /** Base class for the Data Manager
  */ 
@@ -51,11 +48,9 @@ class DataManager
             DATA_MANAGER_OK = 0
         };
 
-        #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0 ||
-                                BOARD == WRIGHT_V1_0_0 ||
-                                BOARD == EARHART_V1_0_0)
+        #if BOARD == DEVELOPMENT_BOARD_V1_1_0 || BOARD == WRIGHT_V1_0_0 || BOARD == EARHART_V1_0_0
         DataManager(PinName write_control, PinName sda, PinName scl, int frequency_hz);
-        #endif /* #if defined (BOARD) && (...) */
+        #endif /* #if BOARD == ... */
 
 		~DataManager();
 
@@ -210,7 +205,7 @@ class DataManager
          */
         int get_remaining_file_entries_bytes(uint8_t filename, int &remaining_bytes);
 
-        #if defined (DM_DBG) && (DM_DBG == true)
+        #if DM_DBG == true
         /** Utility function to print a File_t over UART
          *
          * &pc Serial object over which to print the File_t object parameters
@@ -224,7 +219,7 @@ class DataManager
          * g_stats The GlobalStats_t object whose parameters we wish to print
          */
         void print_global_stats(Serial &pc, DataManager_FileSystem::GlobalStats_t g_stats);
-        #endif // #if defined (DM_DBG) && (DM_DBG == true)
+        #endif // #if DM_DBG == true
 
     private:
 
@@ -260,10 +255,8 @@ class DataManager
          */
         int modify_file(uint8_t filename, DataManager_FileSystem::File_t file);  
 
-        #if defined (BOARD) && (BOARD == DEVELOPMENT_BOARD_V1_1_0 ||
-                                BOARD == WRIGHT_V1_0_0 ||
-                                BOARD == EARHART_V1_0_0)
+        #if BOARD == DEVELOPMENT_BOARD_V1_1_0 || BOARD == WRIGHT_V1_0_0 || BOARD == EARHART_V1_0_0
         STM24256 _storage;
-        #endif /* #if defined (BOARD) && (...) */
+        #endif /* #if BOARD == ... */
 
 };
