@@ -1,4 +1,8 @@
 ## Node Core Data Manager Release Notes
+**v0.5.0** *25/11/2019*
+
+- Update pre-processor directives
+
 **v0.4.0** *20/11/2019*
 
 - Change format of pre-processor directives to work with macros defined in `custom_targets.json`, available from [mbed targets](https://github.com/thingpilot/mbed_targets)

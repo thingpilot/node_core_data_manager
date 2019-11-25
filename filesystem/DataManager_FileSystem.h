@@ -1,6 +1,6 @@
 /**
   * @file    DataManager_FileSystem.h
-  * @version 0.4.0
+  * @version 0.5.0
   * @author  Adam Mitchell
   * @brief   Building blocks of a very lightweight filesystem
   */
