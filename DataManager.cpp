@@ -35,17 +35,18 @@ int DataManager::init_filesystem()
 {
     char blank[PAGE_SIZE_BYTES] = { 0 };
 
-    int status;
-
+    int status = -1;
     for(int ft_page = 0; ft_page < FILE_TABLE_PAGES; ft_page++)
     {
-        status = _storage.write_to_address(FILE_TABLE_START_ADDRESS + (ft_page * PAGE_SIZE_BYTES), blank, PAGE_SIZE_BYTES);
-
+        
+        for(int i=0; i<NUM_OF_WRITE_RETRIES && status!= DataManager::DATA_MANAGER_OK; i++)
+        {
+            status = _storage.write_to_address(FILE_TABLE_START_ADDRESS + (ft_page * PAGE_SIZE_BYTES), blank, PAGE_SIZE_BYTES);
+        }
         if(status != DataManager::DATA_MANAGER_OK)
         {
             return status;
         }
-
         wait_us(5000);
     }
 
@@ -184,14 +185,15 @@ int DataManager::add_file(DataManager_FileSystem::File_t file, uint16_t entries_
     {
         return DataManager_FileSystem::FILE_TABLE_FULL;
     }
-
-    int write_status = _storage.write_to_address(address, file.data, sizeof(file));
-
+    int write_status = -1;
+    for(int i=0; i<NUM_OF_WRITE_RETRIES && write_status!= DataManager::DATA_MANAGER_OK; i++)
+    {
+        write_status = _storage.write_to_address(address, file.data, sizeof(file));
+    }
     if(write_status != DataManager::DATA_MANAGER_OK)
     {
         return write_status;
     }
-
     return DataManager::DATA_MANAGER_OK;
 }
 
@@ -374,9 +376,12 @@ int DataManager::append_file_entry(uint8_t filename, char *data, int data_length
 
     /** Write actual data, i.e. a measurement, to the next available address 
      */
-    status = _storage.write_to_address(file.parameters.next_available_address, 
-                                       data, data_length);
-
+    status = -1;
+    for(int i=0; i<NUM_OF_WRITE_RETRIES && status!= DataManager::DATA_MANAGER_OK; i++)
+    {
+        status = _storage.write_to_address(file.parameters.next_available_address, 
+                                    data, data_length);
+    }
     if(status != DataManager::DATA_MANAGER_OK)
     {
         return status;
@@ -456,14 +461,17 @@ int DataManager::overwrite_file_entries(uint8_t filename, char *data, int data_l
 
     /** Write actual data, i.e. a measurement, to the start address 
      */
-    status = _storage.write_to_address(file.parameters.file_start_address, 
-                                       data, data_length);
-
+    status = -1;
+    for(int i=0; i<NUM_OF_WRITE_RETRIES && status!= DataManager::DATA_MANAGER_OK; i++)
+    {
+        status = _storage.write_to_address(file.parameters.file_start_address, 
+                                    data, data_length);
+    }
     if(status != DataManager::DATA_MANAGER_OK)
     {
         return status;
     }
-
+    
     file.parameters.next_available_address = file.parameters.file_start_address + data_length;
     file.parameters.valid = (file.parameters.filename + file.parameters.length_bytes + file.parameters.file_start_address +
                             file.parameters.file_end_address + file.parameters.next_available_address) | 1;
@@ -535,14 +543,15 @@ int DataManager::truncate_file(uint8_t filename, int entries_to_remove)
         }
 
         uint16_t new_address = file.parameters.file_start_address + (new_index * file.parameters.length_bytes);
-
-        status = _storage.write_to_address(new_address, buffer, file.parameters.length_bytes);
-
+        status = -1;
+        for(int i=0; i<NUM_OF_WRITE_RETRIES && status!= DataManager::DATA_MANAGER_OK; i++)
+        {
+            status = _storage.write_to_address(new_address, buffer, file.parameters.length_bytes);
+        }
         if(status != DataManager::DATA_MANAGER_OK)
         {
             return status;
         }
-
         new_index++;
     }
 
@@ -650,13 +659,15 @@ int DataManager::get_remaining_file_entries_bytes(uint8_t filename, int &remaini
  */
 int DataManager::set_global_stats(char *data)
 {
-    int status = _storage.write_to_address(GLOBAL_STATS_START_ADDRESS, data, GLOBAL_STATS_LENGTH);
-
+    int status = -1;
+    for(int i=0; i<NUM_OF_WRITE_RETRIES && status!= DataManager::DATA_MANAGER_OK; i++)
+    {
+        status = _storage.write_to_address(GLOBAL_STATS_START_ADDRESS, data, GLOBAL_STATS_LENGTH);
+    }
     if(status != DataManager::DATA_MANAGER_OK)
     {
         return status;
     }
-
     return DataManager::DATA_MANAGER_OK;
 }
 
@@ -766,13 +777,16 @@ int DataManager::modify_file(uint8_t filename, DataManager_FileSystem::File_t fi
     {
         return DataManager_FileSystem::FILE_INVALID_NAME;
     }
-
-    int status = _storage.write_to_address(address, file.data, file_size);
-
+    int status = -1;
+    for(int i=0; i<NUM_OF_WRITE_RETRIES && status!= DataManager::DATA_MANAGER_OK; i++)
+    {
+        status = _storage.write_to_address(address, file.data, file_size);
+    }
     if(status != DataManager::DATA_MANAGER_OK)
     {
         return status;
     }
+    
     
     return DataManager::DATA_MANAGER_OK;
 }

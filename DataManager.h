@@ -23,7 +23,8 @@
 /** Include specific drivers dependent on target */
 #if BOARD == DEVELOPMENT_BOARD_V1_1_0 || BOARD == WRIGHT_V1_0_0 || BOARD == EARHART_V1_0_0
     #include "STM24256.h"
-
+    #define NUM_OF_WRITE_RETRIES       3
+    
     #define PAGES                      500
     #define PAGE_SIZE_BYTES            64
     #define EEPROM_SIZE_BYTES          32000
@@ -34,6 +35,7 @@
     #define FILE_TABLE_LENGTH          ((PAGE_SIZE_BYTES * FILE_TABLE_PAGES) - GLOBAL_STATS_LENGTH)
     #define STORAGE_START_ADDRESS      FILE_TABLE_LENGTH + GLOBAL_STATS_LENGTH
     #define STORAGE_LENGTH             ((PAGES * PAGE_SIZE_BYTES) - (STORAGE_START_ADDRESS))
+    
 #endif /* #if BOARD == ... */
 
 /** Base class for the Data Manager
