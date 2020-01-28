@@ -38,11 +38,8 @@ int DataManager::init_filesystem()
     int status = -1;
     for(int ft_page = 0; ft_page < FILE_TABLE_PAGES; ft_page++)
     {
-        
-        for(int i=0; i<NUM_OF_WRITE_RETRIES && status!= DataManager::DATA_MANAGER_OK; i++)
-        {
-            status = _storage.write_to_address(FILE_TABLE_START_ADDRESS + (ft_page * PAGE_SIZE_BYTES), blank, PAGE_SIZE_BYTES);
-        }
+        status = _storage.write_to_address(FILE_TABLE_START_ADDRESS + (ft_page * PAGE_SIZE_BYTES), blank, PAGE_SIZE_BYTES);
+
         if(status != DataManager::DATA_MANAGER_OK)
         {
             return status;
@@ -794,44 +791,41 @@ int DataManager::modify_file(uint8_t filename, DataManager_FileSystem::File_t fi
 #if DM_DBG == true
 /** Utility function to print a File_t over UART
  *
- * &pc Serial object over which to print the File_t object parameters
  * file The File_t object whose parameters we wish to print
  */
-void DataManager::print_file(Serial &pc, DataManager_FileSystem::File_t file)
+void DataManager::print_file(DataManager_FileSystem::File_t file)
 {
-    pc.printf("---PRINT FILE---\r\n");
-    pc.printf("Filename: %u\r\n", file.parameters.filename);
-    pc.printf("Length_bytes: %u\r\n", file.parameters.length_bytes);
-    pc.printf("File_start_address: %u\r\n", file.parameters.file_start_address);
-    pc.printf("File_end_address: %u\r\n", file.parameters.file_end_address);
-    pc.printf("Next_available_address: %u\r\n", file.parameters.next_available_address);
-    pc.printf("Valid: %u\r\n", file.parameters.valid);
+    debug("---PRINT FILE---\r\n");
+    debug("Filename: %u\r\n", file.parameters.filename);
+    debug("Length_bytes: %u\r\n", file.parameters.length_bytes);
+    debug("File_start_address: %u\r\n", file.parameters.file_start_address);
+    debug("File_end_address: %u\r\n", file.parameters.file_end_address);
+    debug("Next_available_address: %u\r\n", file.parameters.next_available_address);
+    debug("Valid: %u\r\n", file.parameters.valid);
 
     int written_entries = 0;
     get_total_written_file_entries(file.parameters.filename, written_entries);
-    pc.printf("Written_entries: %i\r\n", written_entries);
+    debug("Written_entries: %i\r\n", written_entries);
 
     int remaining_entries = 0;
     get_remaining_file_entries(file.parameters.filename, remaining_entries);
-    pc.printf("Remaining_entries: %i\r\n", remaining_entries);
+    debug("Remaining_entries: %i\r\n", remaining_entries);
 
     int remaining_entries_bytes = 0;
     get_remaining_file_entries_bytes(file.parameters.filename, remaining_entries_bytes);
-    pc.printf("Remaining_entries_bytes: %i\r\n", remaining_entries_bytes);
-    pc.printf("---END PRINT FILE---\r\n");
+    debug("Remaining_entries_bytes: %i\r\n", remaining_entries_bytes);
+    debug("---END PRINT FILE---\r\n");
 }
 
 /** Utility function to print GlobalStats_t over UART
  *
- * &pc Serial object over which to print the GlobalStats_t object parameters
  * g_stats The GlobalStats_t object whose parameters we wish to print
  */
-void DataManager::print_global_stats(Serial &pc, DataManager_FileSystem::GlobalStats_t g_stats)
+void DataManager::print_global_stats(DataManager_FileSystem::GlobalStats_t g_stats)
 {
-    pc.printf("---PRINT GLOBAL STATS\r\n");
-    pc.printf("Space_remaining_bytes: %u\r\n", g_stats.parameters.space_remaining);
-    pc.printf("Next_available_address: %u\r\n", g_stats.parameters.next_available_address);
-    pc.printf("---END PRINT GLOBAL STATS\r\n");
+    debug("---PRINT GLOBAL STATS\r\n");
+    debug("Space_remaining_bytes: %u\r\n", g_stats.parameters.space_remaining);
+    debug("Next_available_address: %u\r\n", g_stats.parameters.next_available_address);
+    debug("---END PRINT GLOBAL STATS\r\n");
 }
 #endif // #if DM_DBG == true
-

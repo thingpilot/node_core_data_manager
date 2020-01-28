@@ -24,7 +24,7 @@
 #if BOARD == DEVELOPMENT_BOARD_V1_1_0 || BOARD == WRIGHT_V1_0_0 || BOARD == EARHART_V1_0_0
     #include "STM24256.h"
     #define NUM_OF_WRITE_RETRIES       3
-    
+
     #define PAGES                      500
     #define PAGE_SIZE_BYTES            64
     #define EEPROM_SIZE_BYTES          32000
@@ -35,7 +35,6 @@
     #define FILE_TABLE_LENGTH          ((PAGE_SIZE_BYTES * FILE_TABLE_PAGES) - GLOBAL_STATS_LENGTH)
     #define STORAGE_START_ADDRESS      FILE_TABLE_LENGTH + GLOBAL_STATS_LENGTH
     #define STORAGE_LENGTH             ((PAGES * PAGE_SIZE_BYTES) - (STORAGE_START_ADDRESS))
-    
 #endif /* #if BOARD == ... */
 
 /** Base class for the Data Manager
@@ -210,17 +209,15 @@ class DataManager
         #if DM_DBG == true
         /** Utility function to print a File_t over UART
          *
-         * &pc Serial object over which to print the File_t object parameters
          * file The File_t object whose parameters we wish to print
          */
-        void print_file(Serial &pc, DataManager_FileSystem::File_t file);
+        void print_file(DataManager_FileSystem::File_t file);
 
         /** Utility function to print GlobalStats_t over UART
          *
-         * &pc Serial object over which to print the GlobalStats_t object parameters
          * g_stats The GlobalStats_t object whose parameters we wish to print
          */
-        void print_global_stats(Serial &pc, DataManager_FileSystem::GlobalStats_t g_stats);
+        void print_global_stats(DataManager_FileSystem::GlobalStats_t g_stats);
         #endif // #if DM_DBG == true
 
     private:
