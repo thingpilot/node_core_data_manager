@@ -47,6 +47,12 @@ int DataManager::init_filesystem()
         wait_us(5000);
     }
 
+    return DataManager::DATA_MANAGER_OK;
+}
+
+int DataManager::init_gstats()
+{
+    int status = -1;
     DataManager_FileSystem::GlobalStats_t g_stats;
     g_stats.parameters.next_available_address = STORAGE_START_ADDRESS;
 
@@ -60,7 +66,7 @@ int DataManager::init_filesystem()
     {
         return status;
     }
-
+    
     return DataManager::DATA_MANAGER_OK;
 }
 

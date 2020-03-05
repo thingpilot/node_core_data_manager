@@ -30,7 +30,7 @@
     #define EEPROM_SIZE_BYTES          32000
     #define GLOBAL_STATS_START_ADDRESS 0
     #define GLOBAL_STATS_LENGTH        8
-    #define FILE_TABLE_PAGES           4
+    #define FILE_TABLE_PAGES           7
     #define FILE_TABLE_START_ADDRESS   GLOBAL_STATS_LENGTH
     #define FILE_TABLE_LENGTH          ((PAGE_SIZE_BYTES * FILE_TABLE_PAGES) - GLOBAL_STATS_LENGTH)
     #define STORAGE_START_ADDRESS      FILE_TABLE_LENGTH + GLOBAL_STATS_LENGTH
@@ -61,6 +61,8 @@ class DataManager
          * @return Indicates success or failure reason
          */
         int init_filesystem();
+
+        int init_gstats();
 
         /** Determine whether or not the filesystem has been initialised
          *
