@@ -11,13 +11,13 @@
 #include "DataManager.h"
 
 
-#if BOARD == DEVELOPMENT_BOARD_V1_1_0 || BOARD == WRIGHT_V1_0_0 || BOARD == EARHART_V1_0_0
+//#if BOARD == DEVELOPMENT_BOARD_V1_1_0 || BOARD == WRIGHT_V1_0_0 || BOARD == EARHART_V1_0_0
 DataManager::DataManager(PinName write_control, PinName sda, PinName scl, int frequency_hz) : 
                          _storage(write_control, sda, scl, frequency_hz)
 {
     
 }
-#endif /* #if BOARD == ... */
+//#endif /* #if BOARD == ... */
 
 DataManager::~DataManager()
 {
